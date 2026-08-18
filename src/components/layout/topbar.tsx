@@ -23,6 +23,7 @@ import { Sidebar } from "./sidebar";
 import { CreateIncidentDialog } from "@/components/incidents/create-incident-dialog";
 import { useAuth } from "@/lib/auth";
 import { useIncidentStore } from "@/lib/store";
+import { ROLE_META } from "@/lib/permissions";
 
 function CommandPalette({
   open,
@@ -156,7 +157,20 @@ export function Topbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="flex flex-col gap-0.5">
-                <span>{user?.name}</span>
+                <span className="flex items-center gap-2">
+                  {user?.name}
+                  {user && (
+                    <span
+                      className={
+                        user.role === "admin"
+                          ? "bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                          : "bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                      }
+                    >
+                      {ROLE_META[user.role].label}
+                    </span>
+                  )}
+                </span>
                 <span className="text-muted-foreground text-xs font-normal">
                   {user?.email}
                 </span>

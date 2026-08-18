@@ -9,7 +9,13 @@ export type IncidentStatus =
 
 export type Impact = "critical" | "major" | "minor" | "none";
 
-export type Role = "responder" | "commander" | "observer" | "admin";
+/**
+ * Two access levels. Everyone can run incidents; admins additionally see
+ * org-wide analytics and people stats, and can perform destructive actions.
+ * The capability matrix lives in src/lib/permissions.ts — check capabilities
+ * there rather than comparing roles at the call site.
+ */
+export type Role = "admin" | "user";
 
 export interface User {
   id: string;

@@ -14,13 +14,28 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIncidentStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
+import { can, type Capability } from "@/lib/permissions";
 import { isOpen } from "@/lib/metrics";
 
-const NAV = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  /** When set, the entry only appears for users holding this capability. */
+  requires?: Capability;
+}
+
+const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/board", label: "Board", icon: KanbanSquare },
   { href: "/incidents", label: "Incidents", icon: ListChecks },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  {
+    href: "/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+    requires: "view-analytics",
+  },
   { href: "/team", label: "Team", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -28,7 +43,10 @@ const NAV = [
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const incidents = useIncidentStore((s) => s.incidents);
+  const { user } = useAuth();
   const openCount = incidents.filter(isOpen).length;
+  const nav = NAV.filter((item) => !item.requires || can(user, item.requires));
+  const canResetData = can(user, "reset-demo-data");
 
   return (
     <nav className="flex h-full flex-col gap-1 p-3">
@@ -48,7 +66,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </span>
       </Link>
 
-      {NAV.map((item) => {
+      {nav.map((item) => {
         const active =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
@@ -73,6 +91,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             )}
             <Icon className="relative size-4 shrink-0" />
             <span className="relative">{item.label}</span>
+            {item.requires && (
+              <span className="bg-primary/10 text-primary relative ml-auto rounded px-1.5 py-0.5 text-[10px] font-semibold">
+                Admin
+              </span>
+            )}
             {item.href === "/incidents" && openCount > 0 && (
               <span className="bg-primary/10 text-primary relative ml-auto rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums">
                 {openCount}
@@ -86,8 +109,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <div className="border-sidebar-border bg-sidebar-accent/50 rounded-lg border p-3">
           <p className="text-[11px] font-semibold">Demo mode</p>
           <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
-            Auth is stubbed and data lives in your browser. Reset it any time
-            from Settings.
+            Auth is stubbed and data lives in your browser.
+            {canResetData
+              ? " Reset it any time from Settings."
+              : " Switch accounts in Settings to try admin access."}
           </p>
         </div>
       </div>

@@ -15,8 +15,8 @@ Built with **Next.js 16 (App Router)**, **shadcn/ui**, **Tailwind CSS v4**,
 | `/board` | Drag-and-drop kanban across Triage → Investigating → Mitigating → Monitoring → Resolved, filterable by priority, service and assignee |
 | `/incidents` | Filterable, sortable table of every incident |
 | `/incidents/[id]` | Timeline, comments, evidence (call IDs + attachments), priority/status/assignee controls, and the response clock |
-| `/analytics` | 7/30/90-day windows: trends, per-service reliability and responder load, each chart backed by a table |
-| `/team` | Per-responder queues and per-service health |
+| `/analytics` | **Admin only.** 7/30/90-day windows: trends, per-service reliability and workload per person, each chart backed by a table |
+| `/team` | Per-person queues and per-service health; resolved/MTTR stats are admin only |
 | `/settings` | Theme, account switching, priority targets, demo-data reset |
 
 Plus a ⌘K command palette, light/dark/system theming, and toast feedback on
@@ -44,6 +44,30 @@ A report also captures a free-text **ENV**, any number of **bot call IDs** and
 **VoiceStack call IDs**, and **screenshots or files**. Reporter and assignee are
 both pickable — filing on someone else's behalf is recorded in the timeline as
 "reported … (filed by …)".
+
+### Access levels
+
+Two levels, `admin` and `user`, set per account in
+[`src/lib/seed.ts`](src/lib/seed.ts). Everyone can report and work incidents;
+admins additionally get:
+
+| Capability | User | Admin |
+|---|:--:|:--:|
+| Report, edit, assign and resolve incidents | ✅ | ✅ |
+| Dashboard, board, incidents, team | ✅ | ✅ |
+| Analytics page | — | ✅ |
+| Per-person resolved/MTTR stats on Team | — | ✅ |
+| Delete an incident | — | ✅ |
+| Reset demo data | — | ✅ |
+
+The matrix lives in [`src/lib/permissions.ts`](src/lib/permissions.ts) — call
+sites ask `can(user, "view-analytics")` rather than comparing roles, so adding
+a third level is a change to that one table. Hiding a nav entry is not a
+control on its own, so gated pages also check the capability themselves via
+`<RequireCapability>`.
+
+Ava and Kai are admins in the demo data; the other four are users. Switch
+between them in Settings to see the difference.
 
 ### Where attachments live
 

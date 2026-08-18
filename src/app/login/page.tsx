@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { UserAvatar } from "@/components/user-avatar";
 import { useAuth } from "@/lib/auth";
+import { ROLE_META } from "@/lib/permissions";
 import { fadeUp, stagger } from "@/lib/motion";
 
 function LoginCard() {
@@ -98,8 +99,8 @@ function LoginCard() {
                 <span className="block truncate text-sm font-medium">
                   {u.name}
                 </span>
-                <span className="text-muted-foreground block truncate text-xs capitalize">
-                  {u.role} · {u.team}
+                <span className="text-muted-foreground block truncate text-xs">
+                  {ROLE_META[u.role].label} · {u.team}
                 </span>
               </span>
               <ArrowRight className="text-muted-foreground size-4" />

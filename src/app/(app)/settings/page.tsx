@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useMounted } from "@/hooks/use-mounted";
+import { useCan } from "@/hooks/use-can";
+import { ROLE_META } from "@/lib/permissions";
 import { useIncidentStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { fadeUp, stagger } from "@/lib/motion";
@@ -33,6 +35,7 @@ export default function SettingsPage() {
   const resetDemoData = useIncidentStore((s) => s.resetDemoData);
   const router = useRouter();
   const mounted = useMounted();
+  const canResetData = useCan("reset-demo-data");
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5 p-4 sm:p-6">
@@ -58,7 +61,21 @@ export default function SettingsPage() {
             <div className="mt-4 flex items-center gap-3">
               <UserAvatar user={user} className="size-10" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{user?.name}</p>
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  {user?.name}
+                  {user && (
+                    <span
+                      className={
+                        user.role === "admin"
+                          ? "bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                          : "bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                      }
+                      title={ROLE_META[user.role].blurb}
+                    >
+                      {ROLE_META[user.role].label}
+                    </span>
+                  )}
+                </p>
                 <p className="text-muted-foreground text-xs">{user?.email}</p>
               </div>
               <Button
@@ -93,7 +110,7 @@ export default function SettingsPage() {
                 <SelectContent>
                   {users.map((u) => (
                     <SelectItem key={u.id} value={u.id}>
-                      {u.name} · {u.role}
+                      {u.name} · {ROLE_META[u.role].label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -158,6 +175,7 @@ export default function SettingsPage() {
           </Card>
         </motion.div>
 
+        {canResetData && (
         <motion.div variants={fadeUp}>
           <Card className="px-5 py-4">
             <h2 className="flex items-center gap-2 text-sm font-semibold">
@@ -182,6 +200,7 @@ export default function SettingsPage() {
             </Button>
           </Card>
         </motion.div>
+        )}
       </motion.div>
     </div>
   );

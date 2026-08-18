@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIncidentStore } from "@/lib/store";
+import { RequireCapability } from "@/components/require-capability";
 import { stagger } from "@/lib/motion";
 import {
   dailyTrend,
@@ -42,6 +43,14 @@ const WINDOWS = [
 ];
 
 export default function AnalyticsPage() {
+  return (
+    <RequireCapability capability="view-analytics">
+      <AnalyticsContent />
+    </RequireCapability>
+  );
+}
+
+function AnalyticsContent() {
   const incidents = useIncidentStore((s) => s.incidents);
   const services = useIncidentStore((s) => s.services);
   const users = useIncidentStore((s) => s.users);
@@ -64,7 +73,7 @@ export default function AnalyticsPage() {
   );
   const mttrSeries = React.useMemo(() => mttrTrend(incidents, 10), [incidents]);
 
-  const byResponder = React.useMemo(() => {
+  const byAssignee = React.useMemo(() => {
     return users
       .map((user) => {
         const owned = scoped.filter((i) => i.assigneeId === user.id);
@@ -87,7 +96,7 @@ export default function AnalyticsPage() {
     <div className="mx-auto w-full max-w-[1400px] space-y-5 p-4 sm:p-6">
       <PageHeader
         title="Analytics"
-        description="Reliability trends across services and responders"
+        description="Reliability trends across services and people"
         actions={
           <Tabs value={windowDays} onValueChange={setWindowDays}>
             <TabsList>
@@ -193,7 +202,7 @@ export default function AnalyticsPage() {
         <Card className="overflow-hidden">
           <div className="px-5 pt-5">
             <h2 className="text-sm font-semibold tracking-tight">
-              Responder load
+              Workload by person
             </h2>
             <p className="text-muted-foreground mt-0.5 text-xs">
               Who is carrying the pager in this window
@@ -202,14 +211,14 @@ export default function AnalyticsPage() {
           <Table className="mt-3">
             <TableHeader>
               <TableRow>
-                <TableHead>Responder</TableHead>
+                <TableHead>Person</TableHead>
                 <TableHead className="text-right">Assigned</TableHead>
                 <TableHead className="text-right">Open</TableHead>
                 <TableHead className="text-right">MTTR</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {byResponder.map((row) => (
+              {byAssignee.map((row) => (
                 <TableRow key={row.user.id}>
                   <TableCell className="font-medium">{row.user.name}</TableCell>
                   <TableCell className="text-right tabular-nums">{row.owned}</TableCell>
@@ -221,7 +230,7 @@ export default function AnalyticsPage() {
               ))}
             </TableBody>
           </Table>
-          {byResponder.length === 0 && (
+          {byAssignee.length === 0 && (
             <p className="text-muted-foreground px-5 py-10 text-center text-sm">
               Nothing assigned in this window.
             </p>

@@ -12,14 +12,18 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useIncidentStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
+import { useCan } from "@/hooks/use-can";
+import { ROLE_META } from "@/lib/permissions";
 import { fadeUp, stagger } from "@/lib/motion";
 import { formatDuration, isOpen, mttr } from "@/lib/metrics";
+import { cn } from "@/lib/utils";
 
 export default function TeamPage() {
   const incidents = useIncidentStore((s) => s.incidents);
   const users = useIncidentStore((s) => s.users);
   const services = useIncidentStore((s) => s.services);
   const { user: me } = useAuth();
+  const canSeePeopleStats = useCan("view-people-stats");
 
   const rows = React.useMemo(
     () =>
@@ -64,18 +68,26 @@ export default function TeamPage() {
                       </Badge>
                     )}
                   </p>
-                  <p className="text-muted-foreground text-xs capitalize">
-                    {user.role} · {user.team}
+                  <p className="text-muted-foreground text-xs">
+                    {ROLE_META[user.role].label} · {user.team}
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 px-5 pt-4">
-                {[
-                  ["Open", open.length],
-                  ["Resolved", resolved],
-                  ["MTTR", formatDuration(userMttr)],
-                ].map(([label, value]) => (
+              <div
+                className={cn(
+                  "grid gap-2 px-5 pt-4",
+                  canSeePeopleStats ? "grid-cols-3" : "grid-cols-1"
+                )}
+              >
+                {(canSeePeopleStats
+                  ? [
+                      ["Open", open.length],
+                      ["Resolved", resolved],
+                      ["MTTR", formatDuration(userMttr)],
+                    ]
+                  : [["Open", open.length]]
+                ).map(([label, value]) => (
                   <div key={String(label)} className="bg-muted/50 rounded-lg px-2 py-2 text-center">
                     <p className="text-sm font-semibold tabular-nums">{value}</p>
                     <p className="text-muted-foreground text-[10px]">{label}</p>

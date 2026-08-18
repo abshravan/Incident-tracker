@@ -147,7 +147,7 @@ export default function DashboardPage() {
         <StatTile
           label="Active P1 / P2"
           numeric={stats.critical.length}
-          hint="needs a commander"
+          hint="needs an owner"
           icon={Flame}
           accent="var(--pri-1)"
         />

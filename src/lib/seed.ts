@@ -20,12 +20,12 @@ function mulberry32(seed: number) {
 }
 
 export const USERS: User[] = [
-  { id: "u1", name: "Ava Mehta", email: "ava@acme.io", role: "commander", team: "Platform", avatarColor: "#2a78d6" },
-  { id: "u2", name: "Diego Rivera", email: "diego@acme.io", role: "responder", team: "Backend", avatarColor: "#b1481f" },
-  { id: "u3", name: "Lena Osei", email: "lena@acme.io", role: "responder", team: "Frontend", avatarColor: "#12775a" },
+  { id: "u1", name: "Ava Mehta", email: "ava@acme.io", role: "admin", team: "Platform", avatarColor: "#2a78d6" },
+  { id: "u2", name: "Diego Rivera", email: "diego@acme.io", role: "user", team: "Backend", avatarColor: "#b1481f" },
+  { id: "u3", name: "Lena Osei", email: "lena@acme.io", role: "user", team: "Frontend", avatarColor: "#12775a" },
   { id: "u4", name: "Kai Tanaka", email: "kai@acme.io", role: "admin", team: "SRE", avatarColor: "#8a5c00" },
-  { id: "u5", name: "Priya Nair", email: "priya@acme.io", role: "responder", team: "Data", avatarColor: "#b0466f" },
-  { id: "u6", name: "Sam Whitaker", email: "sam@acme.io", role: "observer", team: "Support", avatarColor: "#5b4bb8" },
+  { id: "u5", name: "Priya Nair", email: "priya@acme.io", role: "user", team: "Data", avatarColor: "#b0466f" },
+  { id: "u6", name: "Sam Whitaker", email: "sam@acme.io", role: "user", team: "Support", avatarColor: "#5b4bb8" },
 ];
 
 export const SERVICES: Service[] = [
@@ -188,10 +188,7 @@ export function buildSeed(now = Date.now()): SeedResult {
     const assignee =
       status === "triage" && rand() > 0.5
         ? null
-        : pick(
-            rand,
-            USERS.filter((u) => u.role !== "observer")
-          );
+        : pick(rand, USERS);
 
     const id = `inc_${i + 1}`;
 

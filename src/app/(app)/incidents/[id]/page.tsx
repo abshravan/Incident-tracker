@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { useIncidentStore } from "@/lib/store";
 import { useNow } from "@/hooks/use-now";
+import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/lib/auth";
 import { fadeUp, stagger } from "@/lib/motion";
 import {
@@ -67,6 +68,7 @@ export default function IncidentDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const now = useNow();
+  const canDelete = useCan("delete-incident");
 
   const incident = useIncidentStore((s) =>
     s.incidents.find((i) => i.id === params.id)
@@ -155,18 +157,20 @@ export default function IncidentDetailPage() {
                 Mark resolved
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Delete incident"
-              onClick={() => {
-                deleteIncident(incident.id);
-                toast(`${incident.key} deleted`);
-                router.push("/incidents");
-              }}
-            >
-              <Trash2 className="size-4" />
-            </Button>
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Delete incident"
+                onClick={() => {
+                  deleteIncident(incident.id);
+                  toast(`${incident.key} deleted`);
+                  router.push("/incidents");
+                }}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            )}
           </div>
         </motion.div>
 
