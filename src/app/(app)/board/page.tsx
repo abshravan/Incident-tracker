@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useIncidentStore } from "@/lib/store";
+import { AssigneeFilterSelect } from "@/components/incidents/assignee-filter";
+import { ASSIGNEE_ALL, matchesAssignee } from "@/lib/filters";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { PRIORITIES, type Priority } from "@/lib/types";
@@ -26,7 +28,7 @@ export default function BoardPage() {
 
   const [priorityFilter, setPriorityFilter] = React.useState<Priority | "all">("all");
   const [serviceFilter, setServiceFilter] = React.useState<string>("all");
-  const [assigneeFilter, setAssigneeFilter] = React.useState<string>("all");
+  const [assigneeFilter, setAssigneeFilter] = React.useState(ASSIGNEE_ALL);
 
   const filtered = React.useMemo(
     () =>
@@ -35,16 +37,16 @@ export default function BoardPage() {
           return false;
         if (serviceFilter !== "all" && incident.serviceId !== serviceFilter)
           return false;
-        if (assigneeFilter === "mine" && incident.assigneeId !== user?.id)
-          return false;
-        if (assigneeFilter === "unassigned" && incident.assigneeId) return false;
+        if (!matchesAssignee(incident, assigneeFilter, user?.id)) return false;
         return true;
       }),
     [incidents, priorityFilter, serviceFilter, assigneeFilter, user?.id]
   );
 
   const filtersActive =
-    priorityFilter !== "all" || serviceFilter !== "all" || assigneeFilter !== "all";
+    priorityFilter !== "all" ||
+    serviceFilter !== "all" ||
+    assigneeFilter !== ASSIGNEE_ALL;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-4 sm:p-6">
@@ -91,16 +93,11 @@ export default function BoardPage() {
           </SelectContent>
         </Select>
 
-        <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-          <SelectTrigger size="sm" className="w-[160px]">
-            <SelectValue placeholder="Assignee" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Everyone</SelectItem>
-            <SelectItem value="mine">Assigned to me</SelectItem>
-            <SelectItem value="unassigned">Unassigned</SelectItem>
-          </SelectContent>
-        </Select>
+        <AssigneeFilterSelect
+          size="sm"
+          value={assigneeFilter}
+          onChange={setAssigneeFilter}
+        />
 
         {filtersActive && (
           <Button
@@ -109,21 +106,44 @@ export default function BoardPage() {
             onClick={() => {
               setPriorityFilter("all");
               setServiceFilter("all");
-              setAssigneeFilter("all");
+              setAssigneeFilter(ASSIGNEE_ALL);
             }}
           >
             Clear
           </Button>
         )}
 
+        {/* The avatar strip doubles as a one-click assignee filter. */}
         <div className="ml-auto flex items-center -space-x-2">
-          {users.slice(0, 5).map((u) => (
-            <UserAvatar
-              key={u.id}
-              user={u}
-              className="border-background size-7 border-2"
-            />
-          ))}
+          {users.map((u) => {
+            const active = assigneeFilter === u.id;
+            return (
+              <motion.button
+                key={u.id}
+                type="button"
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.94 }}
+                onClick={() =>
+                  setAssigneeFilter(active ? ASSIGNEE_ALL : u.id)
+                }
+                aria-pressed={active}
+                title={
+                  active ? `Clear filter on ${u.name}` : `Show only ${u.name}`
+                }
+                className={cn(
+                  "rounded-full transition-[box-shadow,opacity]",
+                  active
+                    ? "ring-primary relative z-10 ring-2"
+                    : assigneeFilter !== ASSIGNEE_ALL && "opacity-45"
+                )}
+              >
+                <UserAvatar
+                  user={u}
+                  className="border-background size-7 border-2"
+                />
+              </motion.button>
+            );
+          })}
           <span className="text-muted-foreground pl-4 text-xs">
             {filtered.length} shown
           </span>

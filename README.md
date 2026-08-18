@@ -12,8 +12,8 @@ Built with **Next.js 16 (App Router)**, **shadcn/ui**, **Tailwind CSS v4**,
 |---|---|
 | `/login` | Dummy sign-in — any email, or one click on a demo account |
 | `/dashboard` | Open/critical counts, MTTA, MTTR, reported-vs-resolved, priority mix, a target-ranked "needs attention" list, and a live activity feed |
-| `/board` | Drag-and-drop kanban across Triage → Investigating → Mitigating → Monitoring → Resolved, filterable by priority, service and assignee |
-| `/incidents` | Filterable, sortable table of every incident |
+| `/board` | Drag-and-drop kanban across Triage → Investigating → Mitigating → Monitoring → Resolved, filterable by priority, service and assignee (the avatar strip filters in one click) |
+| `/incidents` | Sortable table of every incident, filterable by search, status, priority, service and assignee |
 | `/incidents/[id]` | Rich-text timeline and comments, evidence (call IDs + attachments), priority/status/assignee/ETA controls, and the response clock |
 | `/analytics` | **Admin only.** 7/30/90-day windows: trends, per-service reliability and workload per person, each chart backed by a table |
 | `/team` | Per-person queues and per-service health; resolved/MTTR stats are admin only |

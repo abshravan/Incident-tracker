@@ -29,6 +29,9 @@ import {
 } from "@/components/ui/table";
 import { useIncidentStore } from "@/lib/store";
 import { useNow } from "@/hooks/use-now";
+import { useAuth } from "@/lib/auth";
+import { AssigneeFilterSelect } from "@/components/incidents/assignee-filter";
+import { ASSIGNEE_ALL, matchesAssignee } from "@/lib/filters";
 import { formatDuration, isOpen, minutesBetween } from "@/lib/metrics";
 import {
   PRIORITIES,
@@ -52,11 +55,13 @@ export default function IncidentsPage() {
   const users = useIncidentStore((s) => s.users);
   const services = useIncidentStore((s) => s.services);
   const now = useNow();
+  const { user } = useAuth();
 
   const [query, setQuery] = React.useState("");
   const [priority, setPriority] = React.useState<Priority | "all">("all");
   const [status, setStatus] = React.useState<IncidentStatus | "all" | "open">("open");
   const [service, setService] = React.useState("all");
+  const [assignee, setAssignee] = React.useState(ASSIGNEE_ALL);
   const [sort, setSort] = React.useState<SortKey>("created");
 
   const userById = React.useMemo(
@@ -89,6 +94,7 @@ export default function IncidentsPage() {
         if (status !== "all" && status !== "open" && incident.status !== status)
           return false;
         if (service !== "all" && incident.serviceId !== service) return false;
+        if (!matchesAssignee(incident, assignee, user?.id)) return false;
         return true;
       })
       .sort((a, b) => {
@@ -103,7 +109,7 @@ export default function IncidentsPage() {
         }
         return +new Date(b.createdAt) - +new Date(a.createdAt);
       });
-  }, [incidents, query, priority, status, service, sort]);
+  }, [incidents, query, priority, status, service, assignee, sort, user?.id]);
 
   return (
     <div className="mx-auto w-full max-w-[1400px] space-y-4 p-4 sm:p-6">
@@ -173,6 +179,8 @@ export default function IncidentsPage() {
               ))}
             </SelectContent>
           </Select>
+
+          <AssigneeFilterSelect value={assignee} onChange={setAssignee} />
 
           <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
             <SelectTrigger className="w-[160px]">
@@ -308,6 +316,7 @@ export default function IncidentsPage() {
                 setPriority("all");
                 setStatus("all");
                 setService("all");
+                setAssignee(ASSIGNEE_ALL);
               }}
             >
               Clear filters
