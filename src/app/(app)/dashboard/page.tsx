@@ -18,10 +18,10 @@ import { ChartCard } from "@/components/dashboard/chart-card";
 import {
   MttrChart,
   ServiceChart,
-  SeverityChart,
+  PriorityChart,
   TrendChart,
 } from "@/components/dashboard/charts";
-import { SeverityBadge } from "@/components/severity-badge";
+import { PriorityBadge } from "@/components/priority-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { Card } from "@/components/ui/card";
@@ -35,17 +35,17 @@ import {
   dailyTrend,
   delta,
   formatDuration,
-  isBreachingSla,
+  isPastTarget,
   isOpen,
   mtta,
   mttr,
   mttrTrend,
   serviceBreakdown,
-  severityBreakdown,
-  slaBurn,
+  priorityBreakdown,
+  targetBurn,
   withinWindow,
 } from "@/lib/metrics";
-import { SEVERITY_META } from "@/lib/types";
+import { PRIORITY_META } from "@/lib/types";
 
 export default function DashboardPage() {
   const incidents = useIncidentStore((s) => s.incidents);
@@ -65,8 +65,8 @@ export default function DashboardPage() {
 
     return {
       open,
-      critical: open.filter((i) => i.severity === "SEV1" || i.severity === "SEV2"),
-      breaching: open.filter((i) => isBreachingSla(i)),
+      critical: open.filter((i) => i.priority === "P1" || i.priority === "P2"),
+      breaching: open.filter((i) => isPastTarget(i)),
       unassigned: open.filter((i) => !i.assigneeId),
       mtta: mtta(last30),
       mttr: mttr(last30),
@@ -78,7 +78,7 @@ export default function DashboardPage() {
   }, [incidents, now]);
 
   const trend = React.useMemo(() => dailyTrend(incidents, 30), [incidents]);
-  const severity = React.useMemo(() => severityBreakdown(incidents), [incidents]);
+  const priority = React.useMemo(() => priorityBreakdown(incidents), [incidents]);
   const mttrSeries = React.useMemo(() => mttrTrend(incidents, 8), [incidents]);
   const byService = React.useMemo(
     () => serviceBreakdown(incidents, services).slice(0, 6),
@@ -89,7 +89,7 @@ export default function DashboardPage() {
     () =>
       stats.open
         .slice()
-        .sort((a, b) => slaBurn(b, now) - slaBurn(a, now))
+        .sort((a, b) => targetBurn(b, now) - targetBurn(a, now))
         .slice(0, 5),
     [stats.open, now]
   );
@@ -120,7 +120,7 @@ export default function DashboardPage() {
     <div className="mx-auto w-full max-w-[1400px] space-y-6 p-4 sm:p-6">
       <PageHeader
         title={`Good to see you, ${user?.name.split(" ")[0] ?? "there"}`}
-        description={`${stats.open.length} incidents open · ${stats.critical.length} at SEV1/SEV2 · rolling 30-day view`}
+        description={`${stats.open.length} incidents open · ${stats.critical.length} at P1/P2 · rolling 30-day view`}
         actions={
           <Button variant="outline" size="sm" asChild>
             <Link href="/board">
@@ -145,11 +145,11 @@ export default function DashboardPage() {
           accent="var(--chart-1)"
         />
         <StatTile
-          label="Active SEV1 / SEV2"
+          label="Active P1 / P2"
           numeric={stats.critical.length}
           hint="needs a commander"
           icon={Flame}
-          accent="var(--sev-1)"
+          accent="var(--pri-1)"
         />
         <StatTile
           label="Mean time to acknowledge"
@@ -192,10 +192,10 @@ export default function DashboardPage() {
         </ChartCard>
 
         <ChartCard
-          title="Severity mix"
+          title="Priority mix"
           description="All incidents on record"
         >
-          <SeverityChart data={severity} />
+          <PriorityChart data={priority} />
           <div className="mt-4 px-3">
             <div className="mb-1.5 flex items-baseline justify-between text-xs">
               <span className="text-muted-foreground">
@@ -253,7 +253,7 @@ export default function DashboardPage() {
               </p>
             )}
             {attention.map((incident) => {
-              const burn = slaBurn(incident, now);
+              const burn = targetBurn(incident, now);
               const breached = burn >= 1;
               return (
                 <Link
@@ -261,7 +261,7 @@ export default function DashboardPage() {
                   href={`/incidents/${incident.id}`}
                   className="hover:bg-accent/60 flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
                 >
-                  <SeverityBadge severity={incident.severity} />
+                  <PriorityBadge priority={incident.priority} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">
                       {incident.title}
@@ -282,7 +282,7 @@ export default function DashboardPage() {
                       {breached
                         ? "past target"
                         : `${Math.round(burn * 100)}% of ${formatDuration(
-                            SEVERITY_META[incident.severity].slaMinutes
+                            PRIORITY_META[incident.priority].targetMinutes
                           )}`}
                     </span>
                     <Progress

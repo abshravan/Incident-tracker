@@ -16,7 +16,7 @@ import {
 import { useIncidentStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { SEVERITIES, type Severity } from "@/lib/types";
+import { PRIORITIES, type Priority } from "@/lib/types";
 
 export default function BoardPage() {
   const incidents = useIncidentStore((s) => s.incidents);
@@ -24,14 +24,14 @@ export default function BoardPage() {
   const services = useIncidentStore((s) => s.services);
   const { user } = useAuth();
 
-  const [severityFilter, setSeverityFilter] = React.useState<Severity | "all">("all");
+  const [priorityFilter, setPriorityFilter] = React.useState<Priority | "all">("all");
   const [serviceFilter, setServiceFilter] = React.useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = React.useState<string>("all");
 
   const filtered = React.useMemo(
     () =>
       incidents.filter((incident) => {
-        if (severityFilter !== "all" && incident.severity !== severityFilter)
+        if (priorityFilter !== "all" && incident.priority !== priorityFilter)
           return false;
         if (serviceFilter !== "all" && incident.serviceId !== serviceFilter)
           return false;
@@ -40,11 +40,11 @@ export default function BoardPage() {
         if (assigneeFilter === "unassigned" && incident.assigneeId) return false;
         return true;
       }),
-    [incidents, severityFilter, serviceFilter, assigneeFilter, user?.id]
+    [incidents, priorityFilter, serviceFilter, assigneeFilter, user?.id]
   );
 
   const filtersActive =
-    severityFilter !== "all" || serviceFilter !== "all" || assigneeFilter !== "all";
+    priorityFilter !== "all" || serviceFilter !== "all" || assigneeFilter !== "all";
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-4 sm:p-6">
@@ -61,18 +61,18 @@ export default function BoardPage() {
         className="flex flex-wrap items-center gap-2"
       >
         <div className="flex items-center gap-1 rounded-lg border p-1">
-          {(["all", ...SEVERITIES] as const).map((option) => (
+          {(["all", ...PRIORITIES] as const).map((option) => (
             <button
               key={option}
-              onClick={() => setSeverityFilter(option as Severity | "all")}
+              onClick={() => setPriorityFilter(option as Priority | "all")}
               className={cn(
                 "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                severityFilter === option
+                priorityFilter === option
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent"
               )}
             >
-              {option === "all" ? "All severities" : option}
+              {option === "all" ? "All priorities" : option}
             </button>
           ))}
         </div>
@@ -107,7 +107,7 @@ export default function BoardPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              setSeverityFilter("all");
+              setPriorityFilter("all");
               setServiceFilter("all");
               setAssigneeFilter("all");
             }}

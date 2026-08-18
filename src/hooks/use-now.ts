@@ -3,7 +3,7 @@
 import * as React from "react";
 
 /**
- * A shared clock. Reading `Date.now()` during render is impure, and SLA bars
+ * A shared clock. Reading `Date.now()` during render is impure, and the response-clock bars
  * need to keep moving anyway, so time is modelled as an external store that
  * ticks once a minute.
  */

@@ -8,7 +8,7 @@ import { StatTile } from "@/components/dashboard/stat-tile";
 import {
   MttrChart,
   ServiceChart,
-  SeverityChart,
+  PriorityChart,
   TrendChart,
 } from "@/components/dashboard/charts";
 import { Card } from "@/components/ui/card";
@@ -31,7 +31,7 @@ import {
   mttr,
   mttrTrend,
   serviceBreakdown,
-  severityBreakdown,
+  priorityBreakdown,
   withinWindow,
 } from "@/lib/metrics";
 
@@ -57,7 +57,7 @@ export default function AnalyticsPage() {
     () => dailyTrend(incidents, Math.min(days, 60)),
     [incidents, days]
   );
-  const severity = React.useMemo(() => severityBreakdown(scoped), [scoped]);
+  const priority = React.useMemo(() => priorityBreakdown(scoped), [scoped]);
   const byService = React.useMemo(
     () => serviceBreakdown(scoped, services),
     [scoped, services]
@@ -131,8 +131,8 @@ export default function AnalyticsPage() {
           <TrendChart data={trend} />
         </ChartCard>
 
-        <ChartCard title="Severity mix" description={`Incidents in the last ${days} days`}>
-          <SeverityChart data={severity} />
+        <ChartCard title="Priority mix" description={`Incidents in the last ${days} days`}>
+          <PriorityChart data={priority} />
         </ChartCard>
 
         <ChartCard

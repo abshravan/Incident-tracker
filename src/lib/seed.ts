@@ -1,8 +1,8 @@
 import type {
   Impact,
   Incident,
+  Priority,
   Service,
-  Severity,
   IncidentStatus,
   TimelineEvent,
   User,
@@ -21,64 +21,100 @@ function mulberry32(seed: number) {
 
 export const USERS: User[] = [
   { id: "u1", name: "Ava Mehta", email: "ava@acme.io", role: "commander", team: "Platform", avatarColor: "#2a78d6" },
-  { id: "u2", name: "Diego Rivera", email: "diego@acme.io", role: "responder", team: "Payments", avatarColor: "#b1481f" },
-  { id: "u3", name: "Lena Osei", email: "lena@acme.io", role: "responder", team: "Platform", avatarColor: "#12775a" },
+  { id: "u2", name: "Diego Rivera", email: "diego@acme.io", role: "responder", team: "Backend", avatarColor: "#b1481f" },
+  { id: "u3", name: "Lena Osei", email: "lena@acme.io", role: "responder", team: "Frontend", avatarColor: "#12775a" },
   { id: "u4", name: "Kai Tanaka", email: "kai@acme.io", role: "admin", team: "SRE", avatarColor: "#8a5c00" },
   { id: "u5", name: "Priya Nair", email: "priya@acme.io", role: "responder", team: "Data", avatarColor: "#b0466f" },
   { id: "u6", name: "Sam Whitaker", email: "sam@acme.io", role: "observer", team: "Support", avatarColor: "#5b4bb8" },
 ];
 
 export const SERVICES: Service[] = [
-  { id: "s1", name: "Checkout API", owner: "Payments", tier: 1 },
-  { id: "s2", name: "Auth Gateway", owner: "Platform", tier: 1 },
-  { id: "s3", name: "Search Cluster", owner: "Platform", tier: 2 },
-  { id: "s4", name: "Notification Service", owner: "Growth", tier: 2 },
-  { id: "s5", name: "Data Warehouse ETL", owner: "Data", tier: 3 },
-  { id: "s6", name: "Mobile BFF", owner: "Mobile", tier: 2 },
-  { id: "s7", name: "CDN / Edge", owner: "SRE", tier: 1 },
+  { id: "frontend", name: "Frontend", owner: "Web", tier: 1 },
+  { id: "backend", name: "Backend", owner: "Platform", tier: 1 },
+  { id: "database", name: "Database", owner: "Data", tier: 1 },
+  { id: "prompt", name: "Prompt", owner: "AI", tier: 2 },
+  { id: "config", name: "Config", owner: "SRE", tier: 2 },
 ];
 
-const TITLES: [string, string, Severity, Impact][] = [
-  ["Checkout 5xx spike in eu-west-1", "Error rate on POST /checkout jumped from 0.2% to 11% right after the 14:02 deploy. Payment captures are timing out at the provider edge.", "SEV1", "critical"],
-  ["Login sessions dropped for SSO users", "Okta-backed SSO sessions are being invalidated after ~90s. Password logins are unaffected.", "SEV1", "critical"],
-  ["Search latency p99 above 4s", "Query latency degraded after shard rebalance. Autocomplete is the worst hit path.", "SEV2", "major"],
-  ["Push notifications delayed by 20+ minutes", "Queue backlog on the notification worker pool; consumers are lagging behind producers.", "SEV2", "major"],
-  ["Nightly ETL job failed 3 runs in a row", "Warehouse loader is failing on a schema drift in the orders table.", "SEV3", "minor"],
-  ["Mobile app cold start regression", "Android cold start up 800ms since 4.12.0 rolled to 20% of users.", "SEV3", "minor"],
-  ["CDN cache hit ratio down to 61%", "Edge cache purge went wider than intended, causing an origin traffic surge.", "SEV2", "major"],
-  ["Duplicate charges on retried payments", "Idempotency key collision is letting a small number of retries double-charge.", "SEV1", "critical"],
-  ["Webhook deliveries failing for 3 tenants", "Signature verification rejects our payloads after the cert rotation.", "SEV2", "major"],
-  ["Admin dashboard shows stale metrics", "Aggregation job lag means the dashboard trails real time by ~2h.", "SEV4", "none"],
-  ["Rate limiter rejecting valid API keys", "Partner keys are being bucketed under the shared free-tier limit.", "SEV2", "major"],
-  ["Image uploads failing over 8MB", "Edge proxy body-size limit is lower than the documented API limit.", "SEV3", "minor"],
-  ["Elevated DB connection pool saturation", "Pool hits 100% during peak; queries queue for up to 3s.", "SEV2", "major"],
-  ["Emails landing in spam for gmail.com", "SPF alignment broke after the new sending subdomain was added.", "SEV3", "minor"],
-  ["Feature flag service returning defaults", "Flag SDK falls back to defaults when the config CDN 403s.", "SEV2", "major"],
-  ["Broken pagination in orders export", "Cursor resets on page 12, producing duplicate rows in exports.", "SEV4", "none"],
-  ["Kafka consumer group rebalancing loop", "Consumers rebalance every ~30s, stalling downstream processing.", "SEV2", "major"],
-  ["TLS certificate expiring in 48 hours", "Wildcard cert for *.acme.io was not picked up by the auto-renew job.", "SEV3", "minor"],
-  ["Region failover drill caused real traffic drop", "Planned drill routed 12% of live traffic into a cold region.", "SEV1", "critical"],
-  ["Refund workflow stuck in pending", "State machine misses the provider callback and never advances.", "SEV2", "major"],
-  ["Analytics events missing user_id", "Client SDK drops the identity field on session resume.", "SEV3", "minor"],
-  ["Support tool timing out on large accounts", "N+1 query on the account detail view for tenants over 50k users.", "SEV3", "minor"],
-  ["Password reset emails throttled", "Provider throttled us after a burst from the migration script.", "SEV2", "major"],
-  ["Grafana alerting silent for 6 hours", "Alertmanager config reload failed silently after a bad rule.", "SEV1", "critical"],
+type Seedling = [
+  title: string,
+  description: string,
+  priority: Priority,
+  impact: Impact,
+  serviceId: string,
 ];
 
-const LABELS = ["regression", "deploy", "third-party", "capacity", "security", "data", "customer-reported", "monitoring-gap", "config"];
+const TITLES: Seedling[] = [
+  // Frontend
+  ["Checkout page renders blank on Safari", "Bundle throws on an unsupported optional-chaining polyfill. Chrome and Firefox are unaffected.", "P1", "critical", "frontend"],
+  ["Stale service worker serving last week's build", "Returning users are pinned to the previous release until a hard reload.", "P2", "major", "frontend"],
+  ["Login form rejects pasted passwords", "The paste handler strips the input value before validation runs.", "P2", "major", "frontend"],
+  ["Dashboard charts overflow on mobile", "Below 380px the chart container ignores its max-width and pushes the page sideways.", "P3", "minor", "frontend"],
+  ["Bundle regression added 1.4s to first paint", "A date library got pulled into the entry chunk by an unguarded import.", "P3", "minor", "frontend"],
+  ["Empty state flashes before data loads", "Skeletons unmount a frame early on slow connections.", "P4", "none", "frontend"],
+
+  // Backend
+  ["API 5xx spike right after the 14:02 deploy", "Error rate on POST /orders jumped from 0.2% to 11%. Requests time out at the payment provider edge.", "P1", "critical", "backend"],
+  ["Duplicate charges on retried payments", "An idempotency key collision lets a small number of retries double-charge.", "P1", "critical", "backend"],
+  ["Rate limiter rejecting valid partner keys", "Partner keys are being bucketed under the shared free-tier limit.", "P2", "major", "backend"],
+  ["Webhook deliveries failing for 3 tenants", "Signature verification rejects our payloads after the cert rotation.", "P2", "major", "backend"],
+  ["Refund workflow stuck in pending", "The state machine misses the provider callback and never advances.", "P2", "major", "backend"],
+  ["Image uploads failing over 8MB", "The edge proxy body-size limit is lower than the documented API limit.", "P3", "minor", "backend"],
+  ["Broken pagination in the orders export", "The cursor resets on page 12, producing duplicate rows.", "P4", "none", "backend"],
+
+  // Database
+  ["Migration locked the orders table for 6 minutes", "An unbatched backfill took an exclusive lock during peak traffic.", "P1", "critical", "database"],
+  ["Connection pool saturated at peak", "The pool hits 100% every evening and queries queue for up to 3s.", "P2", "major", "database"],
+  ["Replica lag over 40 minutes", "Read replicas are serving stale rows to the reporting path.", "P2", "major", "database"],
+  ["Primary disk at 91%", "WAL growth outpaced the archival job after the retention change.", "P2", "major", "database"],
+  ["N+1 query on the account detail view", "Large tenants time out loading memberships one row at a time.", "P3", "minor", "database"],
+  ["Nightly backup failed three runs in a row", "The dump aborts on a schema drift in the orders table.", "P3", "minor", "database"],
+
+  // Prompt
+  ["System prompt rollout dropped the tool instructions", "The assistant stopped calling tools entirely after the template merge.", "P1", "critical", "prompt"],
+  ["Assistant returning truncated answers", "Responses cut off mid-sentence once the context passes ~8k tokens.", "P2", "major", "prompt"],
+  ["Token spend up 3x after the template change", "A verbose few-shot block was left in the production prompt.", "P2", "major", "prompt"],
+  ["Classifier mislabeling refund requests", "Refund intents are landing in the billing-question bucket about a third of the time.", "P3", "minor", "prompt"],
+  ["Prompt cache missing on every summarize call", "A timestamp in the prefix busts the cache on each request.", "P3", "minor", "prompt"],
+
+  // Config
+  ["Alerting silent for 6 hours after a bad rule reload", "The alert manager config reload failed and kept the last-good ruleset without alerting anyone.", "P1", "critical", "config"],
+  ["Feature flag service returning defaults", "The flag SDK falls back to defaults when the config CDN 403s.", "P2", "major", "config"],
+  ["Wrong env var promoted to production", "A staging endpoint shipped in the release manifest.", "P2", "major", "config"],
+  ["TLS certificate expiring in 48 hours", "The wildcard cert was not picked up by the auto-renew job.", "P3", "minor", "config"],
+  ["Log level left at debug, filling the disk", "Verbose logging from a debugging session was never reverted.", "P4", "none", "config"],
+];
+
+const LABELS = [
+  "regression",
+  "deploy",
+  "third-party",
+  "capacity",
+  "security",
+  "data",
+  "customer-reported",
+  "monitoring-gap",
+  "rollback",
+];
 
 const COMMENTS = [
-  "Rolled back the last deploy, watching error rate now.",
+  "Rolled back the last deploy, watching the error rate now.",
   "Confirmed this is isolated to eu-west-1. us-east-1 is healthy.",
   "Provider status page just went yellow — likely upstream.",
-  "Scaled the worker pool from 6 to 18, backlog is draining.",
+  "Scaled the worker pool from 6 to 18, the backlog is draining.",
   "Adding a dashboard panel so we catch this earlier next time.",
-  "Customer success has been looped in, 4 accounts affected.",
+  "Support has been looped in, 4 accounts affected.",
   "Mitigation is holding. Keeping this in monitoring for an hour.",
   "Filed a follow-up to add an integration test for this path.",
 ];
 
-const STATUS_FLOW: IncidentStatus[] = ["triage", "investigating", "mitigating", "monitoring", "resolved"];
+const STATUS_FLOW: IncidentStatus[] = [
+  "triage",
+  "investigating",
+  "mitigating",
+  "monitoring",
+  "resolved",
+];
 
 function pick<T>(rand: () => number, arr: T[]): T {
   return arr[Math.floor(rand() * arr.length)];
@@ -100,7 +136,7 @@ export function buildSeed(now = Date.now()): SeedResult {
   const HOUR = 3_600_000;
   const DAY = 24 * HOUR;
 
-  TITLES.forEach(([title, description, severity, impact], i) => {
+  TITLES.forEach(([title, description, priority, impact, serviceId], i) => {
     // Decide open/closed first, then age accordingly: an open incident is
     // something the team is working right now, so it has to look fresh on the
     // board. Closed ones spread back across the quarter to feed the trends.
@@ -108,11 +144,11 @@ export function buildSeed(now = Date.now()): SeedResult {
     // Open incidents age against their own response target, so the board shows
     // a believable mix of "inside the window" and "past target".
     const openHours =
-      severity === "SEV1"
+      priority === "P1"
         ? 0.2 + rand() * 5
-        : severity === "SEV2"
+        : priority === "P2"
           ? 0.5 + rand() * 16
-          : severity === "SEV3"
+          : priority === "P3"
             ? 2 + rand() * 64
             : 8 + rand() * 140;
     const ageDays = isOpen ? openHours / 24 : 1 + rand() * 74;
@@ -126,16 +162,14 @@ export function buildSeed(now = Date.now()): SeedResult {
     const acknowledgedAt =
       status === "triage" && rand() > 0.4
         ? null
-        : new Date(
-            Math.min(now, createdAt.getTime() + ackMinutes * 60_000)
-          );
+        : new Date(Math.min(now, createdAt.getTime() + ackMinutes * 60_000));
 
     const resolveHours =
-      severity === "SEV1"
+      priority === "P1"
         ? 0.7 + rand() * 3
-        : severity === "SEV2"
+        : priority === "P2"
           ? 2 + rand() * 10
-          : severity === "SEV3"
+          : priority === "P3"
             ? 6 + rand() * 40
             : 24 + rand() * 90;
     const resolvedAt =
@@ -145,7 +179,12 @@ export function buildSeed(now = Date.now()): SeedResult {
 
     const reporter = pick(rand, USERS);
     const assignee =
-      status === "triage" && rand() > 0.5 ? null : pick(rand, USERS.filter((u) => u.role !== "observer"));
+      status === "triage" && rand() > 0.5
+        ? null
+        : pick(
+            rand,
+            USERS.filter((u) => u.role !== "observer")
+          );
 
     const id = `inc_${i + 1}`;
     const labelCount = 1 + Math.floor(rand() * 2);
@@ -164,10 +203,10 @@ export function buildSeed(now = Date.now()): SeedResult {
       key: `INC-${101 + i}`,
       title,
       description,
-      severity,
+      priority,
       status,
       impact,
-      serviceId: pick(rand, SERVICES).id,
+      serviceId,
       reporterId: reporter.id,
       assigneeId: assignee?.id ?? null,
       labels,
@@ -178,13 +217,13 @@ export function buildSeed(now = Date.now()): SeedResult {
       order: i,
     });
 
-    // Timeline: creation, walk through the statuses it passed, plus chatter.
+    // Timeline: creation, the statuses it walked through, plus chatter.
     let cursor = createdAt.getTime();
     events.push({
       id: `${id}_e0`,
       incidentId: id,
       kind: "created",
-      message: `reported this incident as ${severity}`,
+      message: `reported this incident as ${priority}`,
       authorId: reporter.id,
       at: createdAt.toISOString(),
     });

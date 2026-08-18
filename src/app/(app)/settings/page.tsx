@@ -22,7 +22,7 @@ import { useMounted } from "@/hooks/use-mounted";
 import { useIncidentStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { fadeUp, stagger } from "@/lib/motion";
-import { SEVERITY_META, SEVERITIES } from "@/lib/types";
+import { PRIORITY_META, PRIORITIES } from "@/lib/types";
 import { formatDuration } from "@/lib/metrics";
 
 export default function SettingsPage() {
@@ -129,28 +129,28 @@ export default function SettingsPage() {
 
         <motion.div variants={fadeUp}>
           <Card className="px-5 py-4">
-            <h2 className="text-sm font-semibold">Severity targets</h2>
+            <h2 className="text-sm font-semibold">Priority targets</h2>
             <p className="text-muted-foreground mt-1 text-xs">
-              Each severity carries its own response window. The board and
+              Each priority carries its own response window. The board and
               incident pages track how much of it is left.
             </p>
             <div className="mt-3 grid gap-2">
-              {SEVERITIES.map((severity) => (
+              {PRIORITIES.map((priority) => (
                 <div
-                  key={severity}
+                  key={priority}
                   className="flex items-center gap-3 rounded-lg border px-3 py-2"
                 >
                   <span
                     className="size-2 rounded-full"
-                    style={{ background: SEVERITY_META[severity].chart }}
+                    style={{ background: PRIORITY_META[priority].chart }}
                     aria-hidden
                   />
-                  <span className="text-sm font-medium">{severity}</span>
+                  <span className="text-sm font-medium">{priority}</span>
                   <span className="text-muted-foreground text-xs">
-                    {SEVERITY_META[severity].blurb}
+                    {PRIORITY_META[priority].blurb}
                   </span>
                   <span className="ml-auto text-xs font-medium tabular-nums">
-                    {formatDuration(SEVERITY_META[severity].slaMinutes)}
+                    {formatDuration(PRIORITY_META[priority].targetMinutes)}
                   </span>
                 </div>
               ))}

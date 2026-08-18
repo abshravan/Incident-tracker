@@ -24,10 +24,10 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-sev-1: var(--sev-1);
-  --color-sev-2: var(--sev-2);
-  --color-sev-3: var(--sev-3);
-  --color-sev-4: var(--sev-4);
+  --color-pri-1: var(--pri-1);
+  --color-pri-2: var(--pri-2);
+  --color-pri-3: var(--pri-3);
+  --color-pri-4: var(--pri-4);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -74,12 +74,12 @@
   --input: oklch(0.91 0.006 265);
   --ring: oklch(0.52 0.19 267);
 
-  /* Severity is a status scale, not a series palette: fixed in both themes and
-     never the only signal — every use pairs it with the SEV label. */
-  --sev-1: #d03b3b;
-  --sev-2: #ec835a;
-  --sev-3: #fab219;
-  --sev-4: #898781;
+  /* Priority is a status scale, not a series palette: fixed in both themes and
+     never the only signal — every use pairs it with the P1–P4 label. */
+  --pri-1: #d03b3b;
+  --pri-2: #ec835a;
+  --pri-3: #fab219;
+  --pri-4: #898781;
 
   /* Categorical series palette, validated for CVD separation and contrast
      against the light card surface. Slots are assigned in order, never cycled. */
@@ -120,10 +120,10 @@
   --ring: oklch(0.68 0.16 267);
 
   /* Status steps are mode-invariant; all four clear 3:1 on the dark surface. */
-  --sev-1: #d03b3b;
-  --sev-2: #ec835a;
-  --sev-3: #fab219;
-  --sev-4: #898781;
+  --pri-1: #d03b3b;
+  --pri-2: #ec835a;
+  --pri-3: #fab219;
+  --pri-4: #898781;
 
   /* Same five hues, re-stepped for the dark surface — not an automatic flip. */
   --chart-1: #3987e5;

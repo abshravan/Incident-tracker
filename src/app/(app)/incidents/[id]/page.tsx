@@ -15,7 +15,7 @@ import {
   Trash2,
   UserPlus,
 } from "lucide-react";
-import { SeverityBadge } from "@/components/severity-badge";
+import { PriorityBadge } from "@/components/priority-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { Card } from "@/components/ui/card";
@@ -36,25 +36,25 @@ import { useAuth } from "@/lib/auth";
 import { fadeUp, stagger } from "@/lib/motion";
 import {
   formatDuration,
-  isBreachingSla,
+  isPastTarget,
   minutesBetween,
-  slaBurn,
+  targetBurn,
 } from "@/lib/metrics";
 import {
   IMPACT_META,
-  SEVERITIES,
-  SEVERITY_META,
+  PRIORITIES,
+  PRIORITY_META,
   STATUSES,
   STATUS_META,
   type IncidentStatus,
-  type Severity,
+  type Priority,
   type TimelineKind,
 } from "@/lib/types";
 
 const KIND_STYLE: Record<TimelineKind, { dot: string; label: string }> = {
   created: { dot: "bg-primary", label: "Reported" },
   status: { dot: "bg-sky-500", label: "Status" },
-  severity: { dot: "bg-amber-500", label: "Severity" },
+  priority: { dot: "bg-amber-500", label: "Priority" },
   assignment: { dot: "bg-violet-500", label: "Assignment" },
   comment: { dot: "bg-muted-foreground", label: "Comment" },
   action: { dot: "bg-muted-foreground", label: "Action" },
@@ -113,9 +113,9 @@ export default function IncidentDetailPage() {
   const assignee = incident.assigneeId
     ? userById.get(incident.assigneeId)
     : null;
-  const burn = slaBurn(incident, now);
-  const breached = isBreachingSla(incident, now);
-  const meta = SEVERITY_META[incident.severity];
+  const burn = targetBurn(incident, now);
+  const breached = isPastTarget(incident, now);
+  const meta = PRIORITY_META[incident.priority];
 
   function submitComment(event: React.FormEvent) {
     event.preventDefault();
@@ -171,7 +171,7 @@ export default function IncidentDetailPage() {
 
         <motion.div variants={fadeUp}>
           <div className="flex flex-wrap items-center gap-2">
-            <SeverityBadge severity={incident.severity} />
+            <PriorityBadge priority={incident.priority} />
             <StatusBadge status={incident.status} />
             <span className="text-muted-foreground text-xs">
               {IMPACT_META[incident.impact].label}
@@ -316,10 +316,10 @@ export default function IncidentDetailPage() {
                 <div>
                   <div className="mb-1 flex items-baseline justify-between text-xs">
                     <span className="text-muted-foreground">
-                      {incident.severity} target
+                      {incident.priority} target
                     </span>
                     <span className="font-medium tabular-nums">
-                      {formatDuration(meta.slaMinutes)}
+                      {formatDuration(meta.targetMinutes)}
                     </span>
                   </div>
                   <Progress
@@ -404,14 +404,14 @@ export default function IncidentDetailPage() {
               </div>
 
               <div className="grid gap-1.5">
-                <label className="text-muted-foreground text-xs">Severity</label>
+                <label className="text-muted-foreground text-xs">Priority</label>
                 <Select
-                  value={incident.severity}
+                  value={incident.priority}
                   onValueChange={(v) =>
                     user &&
                     updateIncident(
                       incident.id,
-                      { severity: v as Severity },
+                      { priority: v as Priority },
                       user.id
                     )
                   }
@@ -420,9 +420,9 @@ export default function IncidentDetailPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {SEVERITIES.map((s) => (
+                    {PRIORITIES.map((s) => (
                       <SelectItem key={s} value={s}>
-                        {s} — {SEVERITY_META[s].blurb}
+                        {s} — {PRIORITY_META[s].blurb}
                       </SelectItem>
                     ))}
                   </SelectContent>

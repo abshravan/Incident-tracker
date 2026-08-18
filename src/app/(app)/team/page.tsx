@@ -6,7 +6,7 @@ import { motion } from "motion/react";
 import { formatDistanceToNow } from "date-fns";
 import { PageHeader } from "@/components/layout/page-header";
 import { UserAvatar } from "@/components/user-avatar";
-import { SeverityBadge } from "@/components/severity-badge";
+import { PriorityBadge } from "@/components/priority-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -90,7 +90,7 @@ export default function TeamPage() {
                     href={`/incidents/${incident.id}`}
                     className="hover:bg-accent flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors"
                   >
-                    <SeverityBadge severity={incident.severity} showDot={false} />
+                    <PriorityBadge priority={incident.priority} showDot={false} />
                     <span className="min-w-0 flex-1 truncate text-xs">
                       {incident.title}
                     </span>

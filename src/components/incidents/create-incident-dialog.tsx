@@ -29,16 +29,17 @@ import { useIncidentStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import {
   IMPACT_META,
-  SEVERITIES,
-  SEVERITY_META,
+  PRIORITIES,
+  PRIORITY_META,
   STATUSES,
   STATUS_META,
   type Impact,
   type IncidentStatus,
-  type Severity,
+  type Priority,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+// Kept in sync with the label pool in src/lib/seed.ts.
 const LABEL_SUGGESTIONS = [
   "regression",
   "deploy",
@@ -47,7 +48,8 @@ const LABEL_SUGGESTIONS = [
   "security",
   "data",
   "customer-reported",
-  "config",
+  "monitoring-gap",
+  "rollback",
 ];
 
 export function CreateIncidentDialog({
@@ -66,7 +68,7 @@ export function CreateIncidentDialog({
 
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [severity, setSeverity] = React.useState<Severity>("SEV3");
+  const [priority, setPriority] = React.useState<Priority>("P3");
   const [impact, setImpact] = React.useState<Impact>("minor");
   const [status, setStatus] = React.useState<IncidentStatus>(defaultStatus);
   const [serviceId, setServiceId] = React.useState(services[0]?.id ?? "s1");
@@ -76,7 +78,7 @@ export function CreateIncidentDialog({
   function reset() {
     setTitle("");
     setDescription("");
-    setSeverity("SEV3");
+    setPriority("P3");
     setImpact("minor");
     setStatus(defaultStatus);
     setServiceId(services[0]?.id ?? "s1");
@@ -98,7 +100,7 @@ export function CreateIncidentDialog({
       {
         title,
         description,
-        severity,
+        priority,
         impact,
         serviceId,
         status,
@@ -139,7 +141,7 @@ export function CreateIncidentDialog({
         <DialogHeader>
           <DialogTitle>Report an incident</DialogTitle>
           <DialogDescription>
-            Capture what is broken now — you can refine severity and impact as
+            Capture what is broken now — you can refine priority and impact as
             the picture gets clearer.
           </DialogDescription>
         </DialogHeader>
@@ -169,17 +171,17 @@ export function CreateIncidentDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label>Severity</Label>
+            <Label>Priority</Label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {SEVERITIES.map((s) => {
-                const meta = SEVERITY_META[s];
-                const active = severity === s;
+              {PRIORITIES.map((s) => {
+                const meta = PRIORITY_META[s];
+                const active = priority === s;
                 return (
                   <motion.button
                     key={s}
                     type="button"
                     whileTap={{ scale: 0.97 }}
-                    onClick={() => setSeverity(s)}
+                    onClick={() => setPriority(s)}
                     className={cn(
                       "relative rounded-lg border px-3 py-2 text-left transition-colors",
                       active

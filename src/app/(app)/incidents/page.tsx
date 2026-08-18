@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ArrowUpDown, Filter, Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { SeverityBadge } from "@/components/severity-badge";
+import { PriorityBadge } from "@/components/priority-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { Card } from "@/components/ui/card";
@@ -30,20 +30,20 @@ import {
 import { useIncidentStore } from "@/lib/store";
 import { formatDuration, isOpen, minutesBetween } from "@/lib/metrics";
 import {
-  SEVERITIES,
+  PRIORITIES,
   STATUSES,
   STATUS_META,
   type IncidentStatus,
-  type Severity,
+  type Priority,
 } from "@/lib/types";
 
-type SortKey = "created" | "severity" | "updated";
+type SortKey = "created" | "priority" | "updated";
 
-const SEVERITY_RANK: Record<Severity, number> = {
-  SEV1: 0,
-  SEV2: 1,
-  SEV3: 2,
-  SEV4: 3,
+const PRIORITY_RANK: Record<Priority, number> = {
+  P1: 0,
+  P2: 1,
+  P3: 2,
+  P4: 3,
 };
 
 export default function IncidentsPage() {
@@ -52,7 +52,7 @@ export default function IncidentsPage() {
   const services = useIncidentStore((s) => s.services);
 
   const [query, setQuery] = React.useState("");
-  const [severity, setSeverity] = React.useState<Severity | "all">("all");
+  const [priority, setPriority] = React.useState<Priority | "all">("all");
   const [status, setStatus] = React.useState<IncidentStatus | "all" | "open">("open");
   const [service, setService] = React.useState("all");
   const [sort, setSort] = React.useState<SortKey>("created");
@@ -74,7 +74,7 @@ export default function IncidentsPage() {
           const haystack = `${incident.key} ${incident.title} ${incident.labels.join(" ")}`.toLowerCase();
           if (!haystack.includes(q)) return false;
         }
-        if (severity !== "all" && incident.severity !== severity) return false;
+        if (priority !== "all" && incident.priority !== priority) return false;
         if (status === "open" && !isOpen(incident)) return false;
         if (status !== "all" && status !== "open" && incident.status !== status)
           return false;
@@ -82,10 +82,10 @@ export default function IncidentsPage() {
         return true;
       })
       .sort((a, b) => {
-        if (sort === "severity") {
-          const bySeverity =
-            SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
-          if (bySeverity !== 0) return bySeverity;
+        if (sort === "priority") {
+          const byPriority =
+            PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+          if (byPriority !== 0) return byPriority;
           return +new Date(b.createdAt) - +new Date(a.createdAt);
         }
         if (sort === "updated") {
@@ -93,7 +93,7 @@ export default function IncidentsPage() {
         }
         return +new Date(b.createdAt) - +new Date(a.createdAt);
       });
-  }, [incidents, query, severity, status, service, sort]);
+  }, [incidents, query, priority, status, service, sort]);
 
   return (
     <div className="mx-auto w-full max-w-[1400px] space-y-4 p-4 sm:p-6">
@@ -134,15 +134,15 @@ export default function IncidentsPage() {
           </Select>
 
           <Select
-            value={severity}
-            onValueChange={(v) => setSeverity(v as Severity | "all")}
+            value={priority}
+            onValueChange={(v) => setPriority(v as Priority | "all")}
           >
             <SelectTrigger className="w-[140px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Any severity</SelectItem>
-              {SEVERITIES.map((s) => (
+              <SelectItem value="all">Any priority</SelectItem>
+              {PRIORITIES.map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
                 </SelectItem>
@@ -172,7 +172,7 @@ export default function IncidentsPage() {
             <SelectContent>
               <SelectItem value="created">Newest first</SelectItem>
               <SelectItem value="updated">Recently updated</SelectItem>
-              <SelectItem value="severity">Severity</SelectItem>
+              <SelectItem value="priority">Priority</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -184,7 +184,7 @@ export default function IncidentsPage() {
             <TableRow>
               <TableHead className="w-[92px]">Key</TableHead>
               <TableHead>Incident</TableHead>
-              <TableHead className="w-[90px]">Severity</TableHead>
+              <TableHead className="w-[90px]">Priority</TableHead>
               <TableHead className="w-[140px]">Status</TableHead>
               <TableHead className="w-[150px]">Service</TableHead>
               <TableHead className="w-[110px]">Assignee</TableHead>
@@ -236,7 +236,7 @@ export default function IncidentsPage() {
                       )}
                     </TableCell>
                     <TableCell className="p-3">
-                      <SeverityBadge severity={incident.severity} />
+                      <PriorityBadge priority={incident.priority} />
                     </TableCell>
                     <TableCell className="p-3">
                       <StatusBadge status={incident.status} />
@@ -284,7 +284,7 @@ export default function IncidentsPage() {
               className="mt-4"
               onClick={() => {
                 setQuery("");
-                setSeverity("all");
+                setPriority("all");
                 setStatus("all");
                 setService("all");
               }}

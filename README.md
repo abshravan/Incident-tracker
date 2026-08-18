@@ -11,16 +11,34 @@ Built with **Next.js 16 (App Router)**, **shadcn/ui**, **Tailwind CSS v4**,
 | Route | What it does |
 |---|---|
 | `/login` | Dummy sign-in — any email, or one click on a demo account |
-| `/dashboard` | Open/critical counts, MTTA, MTTR, reported-vs-resolved, severity mix, an SLA-ranked "needs attention" list, and a live activity feed |
-| `/board` | Drag-and-drop kanban across Triage → Investigating → Mitigating → Monitoring → Resolved, filterable by severity, service and assignee |
+| `/dashboard` | Open/critical counts, MTTA, MTTR, reported-vs-resolved, priority mix, a target-ranked "needs attention" list, and a live activity feed |
+| `/board` | Drag-and-drop kanban across Triage → Investigating → Mitigating → Monitoring → Resolved, filterable by priority, service and assignee |
 | `/incidents` | Filterable, sortable table of every incident |
-| `/incidents/[id]` | Timeline, comments, severity/status/assignee controls, and the response clock |
+| `/incidents/[id]` | Timeline, comments, priority/status/assignee controls, and the response clock |
 | `/analytics` | 7/30/90-day windows: trends, per-service reliability and responder load, each chart backed by a table |
 | `/team` | Per-responder queues and per-service health |
-| `/settings` | Theme, account switching, severity targets, demo-data reset |
+| `/settings` | Theme, account switching, priority targets, demo-data reset |
 
 Plus a ⌘K command palette, light/dark/system theming, and toast feedback on
 every mutation.
+
+## Domain model
+
+Incidents are filed against one of five services — **Frontend**, **Backend**,
+**Database**, **Prompt**, **Config** — and carry a priority from **P1** to
+**P4**. Each priority has its own response target, which the board, dashboard
+and incident page all count down against:
+
+| Priority | Meaning | Response target |
+|---|---|---|
+| P1 | Critical — all hands | 1h |
+| P2 | High — major degradation | 4h |
+| P3 | Medium — limited impact | 1d |
+| P4 | Low — cosmetic or tracked | 3d |
+
+Both lists live in code, not a database: services in
+[`src/lib/seed.ts`](src/lib/seed.ts) and priorities in
+[`src/lib/types.ts`](src/lib/types.ts).
 
 ## Getting started
 
@@ -30,8 +48,8 @@ npm run dev      # http://localhost:3000
 ```
 
 Sign in with any email, or pick one of the demo accounts on the login screen.
-The app seeds itself with ~24 incidents spread over the last quarter the first
-time it loads.
+The app seeds itself with 29 incidents across the five services, spread over
+the last quarter, the first time it loads.
 
 ```bash
 npm run build && npm start   # production build
@@ -83,7 +101,7 @@ at build time), so the runtime layer carries only the server bundle.
 
 ## Design notes
 
-- **Severity is a status signal, not a series color.** SEV1–SEV4 use a fixed
+- **Priority is a status signal, not a series color.** P1–P4 use a fixed
   four-step status palette in both themes, and always ship as dot + label so
   the meaning never rests on color alone.
 - **Chart series use a validated categorical palette** — checked for
@@ -91,7 +109,7 @@ at build time), so the runtime layer carries only the server bundle.
   steps chosen for the dark surface rather than flipped from the light ones.
   Every chart with two or more series carries a legend, and each analytics
   chart is paired with the table of the same numbers.
-- **Severity carries a response target** (SEV1 1h → SEV4 3d). The board, the
+- **Priority carries a response target** (P1 1h → P4 3d). The board, the
   dashboard and the incident page all show how much of that window is gone, and
   the clock ticks live via a shared `useNow()` store.
 
@@ -112,7 +130,7 @@ src/
     auth.tsx          the auth stub — replace this for real auth
     store.ts          zustand store, persisted to localStorage
     seed.ts           deterministic demo dataset
-    metrics.ts        MTTA/MTTR/SLA/trend math
-    types.ts          domain model, severity and status metadata
+    metrics.ts        MTTA/MTTR/response-target/trend math
+    types.ts          domain model, priority and status metadata
     motion.ts         shared animation presets
 ```

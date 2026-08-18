@@ -1,20 +1,20 @@
 import { cn } from "@/lib/utils";
-import { SEVERITY_META, type Severity } from "@/lib/types";
+import { PRIORITY_META, type Priority } from "@/lib/types";
 
 /**
- * Severity is a status signal, so it always ships as dot + label. The label
- * stays in ink (SEV3 yellow as text would not clear contrast on white).
+ * Priority is a status signal, so it always ships as dot + label. The label
+ * stays in ink (P3 yellow as text would not clear contrast on white).
  */
-export function SeverityBadge({
-  severity,
+export function PriorityBadge({
+  priority,
   className,
   showDot = true,
 }: {
-  severity: Severity;
+  priority: Priority;
   className?: string;
   showDot?: boolean;
 }) {
-  const meta = SEVERITY_META[severity];
+  const meta = PRIORITY_META[priority];
   return (
     <span
       className={cn(
@@ -31,7 +31,7 @@ export function SeverityBadge({
           aria-hidden
         />
       )}
-      {severity}
+      {priority}
     </span>
   );
 }

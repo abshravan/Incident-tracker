@@ -1,4 +1,4 @@
-export type Severity = "SEV1" | "SEV2" | "SEV3" | "SEV4";
+export type Priority = "P1" | "P2" | "P3" | "P4";
 
 export type IncidentStatus =
   | "triage"
@@ -30,7 +30,7 @@ export interface Service {
 export type TimelineKind =
   | "created"
   | "status"
-  | "severity"
+  | "priority"
   | "assignment"
   | "comment"
   | "action"
@@ -50,7 +50,7 @@ export interface Incident {
   key: string; // INC-104
   title: string;
   description: string;
-  severity: Severity;
+  priority: Priority;
   status: IncidentStatus;
   impact: Impact;
   serviceId: string;
@@ -108,43 +108,49 @@ export const STATUS_META: Record<
   },
 };
 
-export const SEVERITIES: Severity[] = ["SEV1", "SEV2", "SEV3", "SEV4"];
+export const PRIORITIES: Priority[] = ["P1", "P2", "P3", "P4"];
 
-export const SEVERITY_META: Record<
-  Severity,
-  { label: string; blurb: string; className: string; chart: string; slaMinutes: number }
+export const PRIORITY_META: Record<
+  Priority,
+  {
+    label: string;
+    blurb: string;
+    className: string;
+    chart: string;
+    targetMinutes: number;
+  }
 > = {
-  SEV1: {
-    label: "SEV1",
-    blurb: "Full outage — all hands",
+  P1: {
+    label: "P1",
+    blurb: "Critical — all hands",
     className:
-      "bg-[var(--sev-1)]/12 text-foreground border-[var(--sev-1)]/35",
-    chart: "var(--sev-1)",
-    slaMinutes: 60,
+      "bg-[var(--pri-1)]/12 text-foreground border-[var(--pri-1)]/35",
+    chart: "var(--pri-1)",
+    targetMinutes: 60,
   },
-  SEV2: {
-    label: "SEV2",
-    blurb: "Major degradation",
+  P2: {
+    label: "P2",
+    blurb: "High — major degradation",
     className:
-      "bg-[var(--sev-2)]/12 text-foreground border-[var(--sev-2)]/35",
-    chart: "var(--sev-2)",
-    slaMinutes: 240,
+      "bg-[var(--pri-2)]/12 text-foreground border-[var(--pri-2)]/35",
+    chart: "var(--pri-2)",
+    targetMinutes: 240,
   },
-  SEV3: {
-    label: "SEV3",
-    blurb: "Partial / limited impact",
+  P3: {
+    label: "P3",
+    blurb: "Medium — limited impact",
     className:
-      "bg-[var(--sev-3)]/12 text-foreground border-[var(--sev-3)]/35",
-    chart: "var(--sev-3)",
-    slaMinutes: 1440,
+      "bg-[var(--pri-3)]/12 text-foreground border-[var(--pri-3)]/35",
+    chart: "var(--pri-3)",
+    targetMinutes: 1440,
   },
-  SEV4: {
-    label: "SEV4",
-    blurb: "Cosmetic or tracked follow-up",
+  P4: {
+    label: "P4",
+    blurb: "Low — cosmetic or tracked",
     className:
-      "bg-[var(--sev-4)]/12 text-foreground border-[var(--sev-4)]/35",
-    chart: "var(--sev-4)",
-    slaMinutes: 4320,
+      "bg-[var(--pri-4)]/12 text-foreground border-[var(--pri-4)]/35",
+    chart: "var(--pri-4)",
+    targetMinutes: 4320,
   },
 };
 

@@ -142,8 +142,8 @@ export default function LoginPage() {
             },
             {
               icon: ShieldCheck,
-              title: "Severity that means something",
-              body: "SEV1–SEV4 carry their own response clocks, and the board flags anything burning through its budget.",
+              title: "Priority that means something",
+              body: "P1–P4 carry their own response clocks, and the board flags anything burning through its budget.",
             },
             {
               icon: AlertTriangle,

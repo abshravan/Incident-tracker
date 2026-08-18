@@ -7,10 +7,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { motion } from "motion/react";
 import { formatDistanceToNow } from "date-fns";
 import { GripVertical, MessageSquare, TriangleAlert } from "lucide-react";
-import { SeverityBadge } from "@/components/severity-badge";
+import { PriorityBadge } from "@/components/priority-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn } from "@/lib/utils";
-import { isBreachingSla, slaBurn } from "@/lib/metrics";
+import { isPastTarget, targetBurn } from "@/lib/metrics";
 import { useNow } from "@/hooks/use-now";
 import type { Incident, Service, User } from "@/lib/types";
 
@@ -32,8 +32,8 @@ export function IncidentCardBody({
   handleProps?: React.HTMLAttributes<HTMLButtonElement>;
 }) {
   const now = useNow();
-  const breached = isBreachingSla(incident, now);
-  const burn = Math.min(1, slaBurn(incident, now));
+  const breached = isPastTarget(incident, now);
+  const burn = Math.min(1, targetBurn(incident, now));
 
   return (
     <div
@@ -44,14 +44,14 @@ export function IncidentCardBody({
     >
       <span
         className="absolute inset-y-0 left-0 w-[3px]"
-        style={{ background: `var(--sev-${incident.severity.slice(3)})` }}
+        style={{ background: `var(--pri-${incident.priority.slice(1)})` }}
         aria-hidden
       />
 
       <div className="flex items-start gap-2 pl-1.5">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <SeverityBadge severity={incident.severity} />
+            <PriorityBadge priority={incident.priority} />
             <span className="text-muted-foreground font-mono text-[10px]">
               {incident.key}
             </span>

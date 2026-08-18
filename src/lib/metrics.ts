@@ -1,6 +1,6 @@
 import { differenceInMinutes, format, startOfDay, subDays } from "date-fns";
-import type { Incident, Severity, IncidentStatus } from "./types";
-import { SEVERITIES, SEVERITY_META, STATUSES } from "./types";
+import type { Incident, Priority, IncidentStatus } from "./types";
+import { PRIORITIES, PRIORITY_META, STATUSES } from "./types";
 
 export const OPEN_STATUSES: IncidentStatus[] = [
   "triage",
@@ -51,13 +51,13 @@ export function withinWindow(incidents: Incident[], days: number) {
   return incidents.filter((i) => +new Date(i.createdAt) >= cutoff);
 }
 
-export function severityBreakdown(incidents: Incident[]) {
-  return SEVERITIES.map((severity) => ({
-    severity,
-    label: severity,
-    count: incidents.filter((i) => i.severity === severity).length,
-    open: incidents.filter((i) => i.severity === severity && isOpen(i)).length,
-    fill: SEVERITY_META[severity].chart,
+export function priorityBreakdown(incidents: Incident[]) {
+  return PRIORITIES.map((priority) => ({
+    priority,
+    label: priority,
+    count: incidents.filter((i) => i.priority === priority).length,
+    open: incidents.filter((i) => i.priority === priority && isOpen(i)).length,
+    fill: PRIORITY_META[priority].chart,
   }));
 }
 
@@ -123,24 +123,24 @@ export function serviceBreakdown(
     .sort((a, b) => b.total - a.total);
 }
 
-/** How much of the severity SLA an open incident has burned, 0..1+. */
-export function slaBurn(incident: Incident, now = Date.now()) {
+/** How much of the priority response target an open incident has burned, 0..1+. */
+export function targetBurn(incident: Incident, now = Date.now()) {
   const elapsed = (now - +new Date(incident.createdAt)) / 60_000;
-  const budget = SEVERITY_META[incident.severity].slaMinutes;
+  const budget = PRIORITY_META[incident.priority].targetMinutes;
   return elapsed / budget;
 }
 
-export function isBreachingSla(incident: Incident, now = Date.now()) {
-  return isOpen(incident) && slaBurn(incident, now) >= 1;
+export function isPastTarget(incident: Incident, now = Date.now()) {
+  return isOpen(incident) && targetBurn(incident, now) >= 1;
 }
 
-export function severityCounts(incidents: Incident[]) {
-  return SEVERITIES.reduce<Record<Severity, number>>(
-    (acc, s) => {
-      acc[s] = incidents.filter((i) => i.severity === s).length;
+export function priorityCounts(incidents: Incident[]) {
+  return PRIORITIES.reduce<Record<Priority, number>>(
+    (acc, p) => {
+      acc[p] = incidents.filter((i) => i.priority === p).length;
       return acc;
     },
-    { SEV1: 0, SEV2: 0, SEV3: 0, SEV4: 0 }
+    { P1: 0, P2: 0, P3: 0, P4: 0 }
   );
 }
 

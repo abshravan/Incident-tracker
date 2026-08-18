@@ -16,7 +16,7 @@ import {
   YAxis,
 } from "recharts";
 import { ChartTooltip } from "./chart-card";
-import { SEVERITY_META, type Severity } from "@/lib/types";
+import { PRIORITY_META, type Priority } from "@/lib/types";
 import { formatDuration } from "@/lib/metrics";
 
 const AXIS = {
@@ -101,17 +101,17 @@ export function TrendChart({
   );
 }
 
-/** Severity mix — status colors, always beside their SEV label. */
-export function SeverityChart({
+/** Priority mix — status colors, always beside their P1–P4 label. */
+export function PriorityChart({
   data,
 }: {
-  data: { severity: Severity; count: number; open: number; fill: string }[];
+  data: { priority: Priority; count: number; open: number; fill: string }[];
 }) {
   const max = Math.max(1, ...data.map((d) => d.count));
   return (
     <div className="grid gap-3 px-3 py-1">
       {data.map((row) => (
-        <div key={row.severity} className="grid gap-1.5">
+        <div key={row.priority} className="grid gap-1.5">
           <div className="flex items-baseline justify-between text-xs">
             <span className="flex items-center gap-1.5 font-medium">
               <span
@@ -119,9 +119,9 @@ export function SeverityChart({
                 style={{ background: row.fill }}
                 aria-hidden
               />
-              {row.severity}
+              {row.priority}
               <span className="text-muted-foreground font-normal">
-                {SEVERITY_META[row.severity].blurb}
+                {PRIORITY_META[row.priority].blurb}
               </span>
             </span>
             <span className="tabular-nums">

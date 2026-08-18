@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/user-avatar";
-import { SeverityBadge } from "@/components/severity-badge";
+import { PriorityBadge } from "@/components/priority-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { ThemeToggle } from "./theme-toggle";
 import { Sidebar } from "./sidebar";
@@ -91,7 +91,7 @@ function CommandPalette({
                 {incident.key}
               </span>
               <span className="flex-1 truncate text-sm">{incident.title}</span>
-              <SeverityBadge severity={incident.severity} showDot={false} />
+              <PriorityBadge priority={incident.priority} showDot={false} />
               <StatusBadge status={incident.status} className="hidden sm:flex" />
             </button>
           ))}

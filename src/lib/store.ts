@@ -6,8 +6,8 @@ import { buildSeed, SERVICES, USERS } from "./seed";
 import type {
   Incident,
   IncidentStatus,
+  Priority,
   Service,
-  Severity,
   TimelineEvent,
   User,
 } from "./types";
@@ -15,7 +15,7 @@ import type {
 export interface NewIncidentInput {
   title: string;
   description: string;
-  severity: Severity;
+  priority: Priority;
   impact: Incident["impact"];
   serviceId: string;
   assigneeId: string | null;
@@ -113,7 +113,7 @@ export const useIncidentStore = create<IncidentState>()(
           key: nextKey(get().incidents),
           title: input.title.trim(),
           description: input.description.trim(),
-          severity: input.severity,
+          priority: input.priority,
           status,
           impact: input.impact,
           serviceId: input.serviceId,
@@ -138,7 +138,7 @@ export const useIncidentStore = create<IncidentState>()(
                 id: uid(),
                 incidentId: incident.id,
                 kind: "created" as const,
-                message: `reported this incident as ${incident.severity}`,
+                message: `reported this incident as ${incident.priority}`,
                 authorId: actorId,
                 at: now,
               },
@@ -165,8 +165,8 @@ export const useIncidentStore = create<IncidentState>()(
             at: now,
           });
 
-        if (patch.severity && patch.severity !== before.severity) {
-          log("severity", `changed severity ${before.severity} → ${patch.severity}`);
+        if (patch.priority && patch.priority !== before.priority) {
+          log("priority", `changed priority ${before.priority} → ${patch.priority}`);
         }
         if (patch.status && patch.status !== before.status) {
           log(
@@ -287,7 +287,10 @@ export const useIncidentStore = create<IncidentState>()(
     }),
     {
       name: "incident-tracker/data",
-      version: 1,
+      // v2 renamed `severity` to `priority` and replaced the service list, so
+      // anything older is discarded and reseeded rather than migrated.
+      version: 2,
+      migrate: () => ({ incidents: [], events: [], seededAt: null }),
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         incidents: state.incidents,
