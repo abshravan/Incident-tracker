@@ -4,10 +4,13 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { buildSeed, SERVICES, USERS } from "./seed";
 import { deleteAttachment } from "./attachments";
+import { mentionedUserIds } from "./richtext";
 import type {
   Attachment,
   Incident,
   IncidentStatus,
+  Notification,
+  NotificationKind,
   Priority,
   Service,
   TimelineEvent,
@@ -34,6 +37,7 @@ export interface NewIncidentInput {
 interface IncidentState {
   incidents: Incident[];
   events: TimelineEvent[];
+  notifications: Notification[];
   users: User[];
   services: Service[];
   hydrated: boolean;
@@ -61,6 +65,9 @@ interface IncidentState {
     actorId: string,
     attachments?: Attachment[]
   ) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: (userId: string) => void;
+  clearReadNotifications: (userId: string) => void;
   /** Only the assignee (or an admin) sets this — see canSetEta in permissions. */
   setEta: (incidentId: string, eta: string | null, actorId: string) => void;
   deleteIncident: (id: string) => void;
@@ -75,6 +82,36 @@ function nextKey(incidents: Incident[]) {
     return Number.isFinite(n) ? Math.max(acc, n) : acc;
   }, 100);
   return `INC-${max + 1}`;
+}
+
+/**
+ * Who hears about a change to an incident: the people carrying it. The actor
+ * is always dropped — you do not get told about your own action.
+ */
+function watchersOf(incident: Incident, actorId: string) {
+  return [...new Set([incident.assigneeId, incident.reporterId])].filter(
+    (id): id is string => !!id && id !== actorId
+  );
+}
+
+function buildNotifications(
+  recipients: string[],
+  incidentId: string,
+  kind: NotificationKind,
+  message: string,
+  actorId: string,
+  at: string
+): Notification[] {
+  return [...new Set(recipients)].map((userId) => ({
+    id: uid(),
+    userId,
+    incidentId,
+    kind,
+    message,
+    actorId,
+    at,
+    readAt: null,
+  }));
 }
 
 /** Renumbers a column so orders stay 0..n-1 with no gaps. */
@@ -92,6 +129,7 @@ export const useIncidentStore = create<IncidentState>()(
     (set, get) => ({
       incidents: [],
       events: [],
+      notifications: [],
       users: USERS,
       services: SERVICES,
       hydrated: false,
@@ -103,6 +141,7 @@ export const useIncidentStore = create<IncidentState>()(
         set({
           incidents,
           events,
+          notifications: [],
           users: USERS,
           services: SERVICES,
           seededAt: new Date().toISOString(),
@@ -110,10 +149,11 @@ export const useIncidentStore = create<IncidentState>()(
       },
 
       resetDemoData: () => {
-        const { incidents, events } = buildSeed();
+        const { incidents, events, notifications } = buildSeed();
         set({
           incidents,
           events,
+          notifications,
           users: USERS,
           services: SERVICES,
           seededAt: new Date().toISOString(),
@@ -138,6 +178,7 @@ export const useIncidentStore = create<IncidentState>()(
           attachments: input.attachments,
           reporterId: input.reporterId || actorId,
           assigneeId: input.assigneeId,
+          assignedById: input.assigneeId ? actorId : null,
           createdAt: now,
           updatedAt: now,
           acknowledgedAt: input.assigneeId ? now : null,
@@ -169,6 +210,23 @@ export const useIncidentStore = create<IncidentState>()(
                 authorId: incident.reporterId,
                 at: now,
               },
+            ],
+            notifications: [
+              ...state.notifications,
+              ...buildNotifications(
+                [
+                  incident.assigneeId,
+                  // Someone filing on your behalf is worth knowing about.
+                  incident.reporterId !== actorId ? incident.reporterId : null,
+                ].filter((id): id is string => !!id && id !== actorId),
+                incident.id,
+                incident.assigneeId && incident.assigneeId !== actorId
+                  ? "assigned"
+                  : "comment",
+                `${incident.key} · ${incident.title}`,
+                actorId,
+                now
+              ),
             ],
           };
         });
@@ -208,12 +266,30 @@ export const useIncidentStore = create<IncidentState>()(
         }
         if (note) log("action", note);
 
+        const recipients = new Set<string>();
+        const notifyKinds: { kind: NotificationKind; extra?: string }[] = [];
+        if (patch.assigneeId && patch.assigneeId !== before.assigneeId) {
+          notifyKinds.push({ kind: "assigned", extra: patch.assigneeId });
+        }
+        if (patch.status && patch.status !== before.status) {
+          notifyKinds.push({ kind: "status" });
+        }
+        if (patch.priority && patch.priority !== before.priority) {
+          notifyKinds.push({ kind: "priority" });
+        }
+        for (const id2 of watchersOf(before, actorId)) recipients.add(id2);
+
         set((state) => {
           const incidents = state.incidents.map((i) =>
             i.id === id
               ? {
                   ...i,
                   ...patch,
+                  assignedById:
+                    patch.assigneeId !== undefined &&
+                    patch.assigneeId !== i.assigneeId
+                      ? actorId
+                      : i.assignedById,
                   updatedAt: now,
                   acknowledgedAt:
                     i.acknowledgedAt ??
@@ -233,7 +309,25 @@ export const useIncidentStore = create<IncidentState>()(
             normalize(incidents, before.status);
             normalize(incidents, patch.status);
           }
-          return { incidents, events: [...state.events, ...newEvents] };
+          const label = `${before.key} · ${before.title}`;
+          const fresh = notifyKinds.flatMap(({ kind, extra }) =>
+            buildNotifications(
+              kind === "assigned"
+                ? [extra!].filter((r) => r !== actorId)
+                : [...recipients],
+              id,
+              kind,
+              label,
+              actorId,
+              now
+            )
+          );
+
+          return {
+            incidents,
+            events: [...state.events, ...newEvents],
+            notifications: [...state.notifications, ...fresh],
+          };
         });
       },
 
@@ -282,12 +376,37 @@ export const useIncidentStore = create<IncidentState>()(
                   },
                 ];
 
-          return { incidents, events };
+          const notifications =
+            from === status
+              ? state.notifications
+              : [
+                  ...state.notifications,
+                  ...buildNotifications(
+                    watchersOf(moving, actorId),
+                    id,
+                    "status",
+                    `${moving.key} · ${moving.title}`,
+                    actorId,
+                    now
+                  ),
+                ];
+
+          return { incidents, events, notifications };
         });
       },
 
       addComment: (incidentId, message, actorId, attachments) => {
         const now = new Date().toISOString();
+        const incident = get().incidents.find((i) => i.id === incidentId);
+        const mentioned = [...mentionedUserIds(message)].filter(
+          (id) => id !== actorId && get().users.some((u) => u.id === id)
+        );
+        // A mention is the stronger signal, so someone both watching and
+        // mentioned hears about it once, as a mention.
+        const watchers = incident
+          ? watchersOf(incident, actorId).filter((id) => !mentioned.includes(id))
+          : [];
+
         set((state) => ({
           events: [
             ...state.events,
@@ -304,6 +423,25 @@ export const useIncidentStore = create<IncidentState>()(
           incidents: state.incidents.map((i) =>
             i.id === incidentId ? { ...i, updatedAt: now } : i
           ),
+          notifications: [
+            ...state.notifications,
+            ...buildNotifications(
+              mentioned,
+              incidentId,
+              "mention",
+              incident ? `${incident.key} · ${incident.title}` : "",
+              actorId,
+              now
+            ),
+            ...buildNotifications(
+              watchers,
+              incidentId,
+              "comment",
+              incident ? `${incident.key} · ${incident.title}` : "",
+              actorId,
+              now
+            ),
+          ],
         }));
       },
 
@@ -334,8 +472,50 @@ export const useIncidentStore = create<IncidentState>()(
               at: now,
             },
           ],
+          notifications: [
+            ...state.notifications,
+            ...buildNotifications(
+              // The assigner cares about the ETA too, not just the watchers.
+              [
+                ...watchersOf(before, actorId),
+                ...(before.assignedById && before.assignedById !== actorId
+                  ? [before.assignedById]
+                  : []),
+              ],
+              incidentId,
+              "eta",
+              `${before.key} · ${before.title}`,
+              actorId,
+              now
+            ),
+          ],
         }));
       },
+
+      markNotificationRead: (id) =>
+        set((state) => ({
+          notifications: state.notifications.map((n) =>
+            n.id === id && !n.readAt
+              ? { ...n, readAt: new Date().toISOString() }
+              : n
+          ),
+        })),
+
+      markAllNotificationsRead: (userId) => {
+        const now = new Date().toISOString();
+        set((state) => ({
+          notifications: state.notifications.map((n) =>
+            n.userId === userId && !n.readAt ? { ...n, readAt: now } : n
+          ),
+        }));
+      },
+
+      clearReadNotifications: (userId) =>
+        set((state) => ({
+          notifications: state.notifications.filter(
+            (n) => !(n.userId === userId && n.readAt)
+          ),
+        })),
 
       deleteIncident: (id) => {
         const incident = get().incidents.find((i) => i.id === id);
@@ -352,19 +532,26 @@ export const useIncidentStore = create<IncidentState>()(
         set((state) => ({
           incidents: state.incidents.filter((i) => i.id !== id),
           events: state.events.filter((e) => e.incidentId !== id),
+          notifications: state.notifications.filter((n) => n.incidentId !== id),
         }));
       },
     }),
     {
       name: "incident-tracker/data",
-      // v4 added eta and comment attachments on top of v3's reshape. Older
-      // payloads are discarded and reseeded rather than migrated.
-      version: 4,
-      migrate: () => ({ incidents: [], events: [], seededAt: null }),
+      // v5 added assignedById and the notification inbox. Older payloads are
+      // discarded and reseeded rather than migrated.
+      version: 5,
+      migrate: () => ({
+        incidents: [],
+        events: [],
+        notifications: [],
+        seededAt: null,
+      }),
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         incidents: state.incidents,
         events: state.events,
+        notifications: state.notifications,
         seededAt: state.seededAt,
       }),
     }

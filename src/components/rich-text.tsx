@@ -10,6 +10,7 @@ import {
   parseRichText,
   type Inline,
 } from "@/lib/richtext";
+import { useIncidentStore } from "@/lib/store";
 
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
   const [copied, setCopied] = React.useState(false);
@@ -74,6 +75,21 @@ function InlineImage({ alt, src }: { alt: string; src: string }) {
   );
 }
 
+function Mention({ name, userId }: { name: string; userId: string }) {
+  const users = useIncidentStore((s) => s.users);
+  // Resolve by id so a rename shows the current name, falling back to whatever
+  // was written if the account is gone.
+  const user = users.find((u) => u.id === userId);
+  return (
+    <span
+      className="bg-primary/10 text-primary rounded px-1 py-0.5 text-[0.9em] font-medium"
+      title={user ? `${user.name} · ${user.team}` : name}
+    >
+      @{user?.name ?? name}
+    </span>
+  );
+}
+
 function renderInline(inline: Inline, key: number) {
   switch (inline.type) {
     case "text":
@@ -105,6 +121,8 @@ function renderInline(inline: Inline, key: number) {
           {inline.text}
         </a>
       );
+    case "mention":
+      return <Mention key={key} name={inline.name} userId={inline.userId} />;
     case "image":
       return <InlineImage key={key} alt={inline.alt} src={inline.src} />;
   }

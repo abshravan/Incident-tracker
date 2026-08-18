@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { LogOut, Menu, Search, X } from "lucide-react";
+import { Bell, LogOut, Menu, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,6 +24,7 @@ import { CreateIncidentDialog } from "@/components/incidents/create-incident-dia
 import { useAuth } from "@/lib/auth";
 import { useIncidentStore } from "@/lib/store";
 import { ROLE_META } from "@/lib/permissions";
+import { useNotifications } from "@/hooks/use-notifications";
 
 function CommandPalette({
   open,
@@ -107,6 +108,7 @@ function CommandPalette({
 
 export function Topbar() {
   const { user, signOut } = useAuth();
+  const { unread } = useNotifications();
   const router = useRouter();
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [mobileNav, setMobileNav] = React.useState(false);
@@ -148,6 +150,23 @@ export function Topbar() {
 
         <div className="ml-auto flex items-center gap-1.5">
           <CreateIncidentDialog />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            asChild
+            aria-label={
+              unread > 0 ? `${unread} unread notifications` : "Notifications"
+            }
+          >
+            <Link href="/notifications" className="relative">
+              <Bell className="size-4" />
+              {unread > 0 && (
+                <span className="bg-primary text-primary-foreground absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full px-1 text-[10px] leading-4 font-semibold tabular-nums">
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
+            </Link>
+          </Button>
           <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

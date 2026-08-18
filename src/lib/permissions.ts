@@ -40,13 +40,17 @@ export function can(user: User | null | undefined, capability: Capability) {
 export const isAdmin = (user: User | null | undefined) => user?.role === "admin";
 
 /**
- * The ETA is the assignee's commitment, so it is theirs to set. Admins can too,
- * since they can already change everything else on the record.
+ * The ETA is a commitment between two people: the assignee who owns the work,
+ * and whoever assigned it to them. Either can set it, as can an admin.
  */
 export function canSetEta(
   user: User | null | undefined,
-  incident: Pick<Incident, "assigneeId">
+  incident: Pick<Incident, "assigneeId" | "assignedById">
 ) {
   if (!user) return false;
-  return isAdmin(user) || incident.assigneeId === user.id;
+  return (
+    isAdmin(user) ||
+    incident.assigneeId === user.id ||
+    incident.assignedById === user.id
+  );
 }

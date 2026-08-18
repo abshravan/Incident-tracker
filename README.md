@@ -14,6 +14,7 @@ Built with **Next.js 16 (App Router)**, **shadcn/ui**, **Tailwind CSS v4**,
 | `/dashboard` | Open/critical counts, MTTA, MTTR, reported-vs-resolved, priority mix, a target-ranked "needs attention" list, and a live activity feed |
 | `/board` | Drag-and-drop kanban across Triage → Investigating → Mitigating → Monitoring → Resolved, filterable by priority, service and assignee (the avatar strip filters in one click) |
 | `/incidents` | Sortable table of every incident, filterable by search, status, priority, service and assignee |
+| `/notifications` | Your inbox: assignments, mentions, and activity on incidents you own |
 | `/incidents/[id]` | Rich-text timeline and comments, evidence (call IDs + attachments), priority/status/assignee/ETA controls, and the response clock |
 | `/analytics` | **Admin only.** 7/30/90-day windows: trends, per-service reliability and workload per person, each chart backed by a table |
 | `/team` | Per-person queues and per-service health; resolved/MTTR stats are admin only |
@@ -88,10 +89,32 @@ gallery lists only attachments that are not already rendered inline.
 
 ### ETAs
 
-The assignee (or an admin) can put an ETA on an incident from the response
-clock, and clear it again. It shows as a countdown there, as a chip on the
+The assignee, whoever assigned it to them, or an admin can put an ETA on an
+incident from the response clock, and clear it again. The incident records
+`assignedById` when the assignee changes, which is what lets the assigner keep
+the estimate honest without being an admin. It shows as a countdown there, as a chip on the
 board card, as a column in the incident list, and every change lands in the
 timeline. Once resolved, the ETA reports whether it was met.
+
+### Mentions and notifications
+
+Typing `@` in a description or comment opens a picker; choosing someone stores
+the mention structurally as `@[Name](user:id)`, so renaming an account does not
+break the link — the chip resolves the current name at render time. A bare
+`@name` that was never picked from the menu stays plain text.
+
+Notifications land in `/notifications` (and on the bell in the top bar) when:
+
+| Event | Who hears about it |
+|---|---|
+| Assigned to you | the new assignee |
+| Mentioned in a comment | everyone mentioned |
+| Comment posted | assignee and reporter |
+| Status or priority changed | assignee and reporter |
+| ETA set or cleared | assignee, reporter, and whoever assigned it |
+
+The actor never notifies themselves, and someone both mentioned and watching
+hears once, as a mention. Deleting an incident clears its notifications too.
 
 ### Where attachments live
 

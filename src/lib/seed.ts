@@ -1,6 +1,8 @@
 import type {
   Impact,
   Incident,
+  Notification,
+  NotificationKind,
   Priority,
   Service,
   IncidentStatus,
@@ -138,6 +140,7 @@ function pick<T>(rand: () => number, arr: T[]): T {
 export interface SeedResult {
   incidents: Incident[];
   events: TimelineEvent[];
+  notifications: Notification[];
 }
 
 /**
@@ -148,6 +151,7 @@ export function buildSeed(now = Date.now()): SeedResult {
   const rand = mulberry32(20260818);
   const incidents: Incident[] = [];
   const events: TimelineEvent[] = [];
+  const notifications: Notification[] = [];
   const HOUR = 3_600_000;
   const DAY = 24 * HOUR;
 
@@ -239,6 +243,8 @@ export function buildSeed(now = Date.now()): SeedResult {
       attachments: [],
       reporterId: reporter.id,
       assigneeId: assignee?.id ?? null,
+      // Whoever reported it is the one who handed it over, in the demo data.
+      assignedById: assignee ? reporter.id : null,
       createdAt: createdAt.toISOString(),
       updatedAt: updatedAt.toISOString(),
       acknowledgedAt: acknowledgedAt?.toISOString() ?? null,
@@ -305,5 +311,38 @@ export function buildSeed(now = Date.now()): SeedResult {
     });
 
   events.sort((a, b) => +new Date(a.at) - +new Date(b.at));
-  return { incidents, events };
+
+  // A starter inbox drawn from recent activity on still-open incidents, so the
+  // notifications tab is not empty on first load.
+  const recent = incidents
+    .filter((i) => i.status !== "resolved" && i.assigneeId)
+    .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
+    .slice(0, 9);
+
+  recent.forEach((incident, index) => {
+    const kind: NotificationKind =
+      index % 4 === 0
+        ? "assigned"
+        : index % 4 === 1
+          ? "comment"
+          : index % 4 === 2
+            ? "status"
+            : "eta";
+    const actor =
+      USERS.find((u) => u.id === incident.reporterId) ?? USERS[0];
+    notifications.push({
+      id: `ntf_${incident.id}`,
+      userId: incident.assigneeId!,
+      incidentId: incident.id,
+      kind,
+      message: `${incident.key} · ${incident.title}`,
+      actorId: actor.id === incident.assigneeId ? USERS[3].id : actor.id,
+      at: incident.updatedAt,
+      // The two oldest start read, so both states are visible.
+      readAt: index >= 7 ? incident.updatedAt : null,
+    });
+  });
+
+  notifications.sort((a, b) => +new Date(b.at) - +new Date(a.at));
+  return { incidents, events, notifications };
 }

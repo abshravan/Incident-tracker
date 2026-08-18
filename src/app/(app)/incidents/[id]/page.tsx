@@ -515,6 +515,18 @@ export default function IncidentDetailPage() {
                   <dt className="text-muted-foreground">Owner team</dt>
                   <dd>{service?.owner ?? "—"}</dd>
                 </div>
+                {incident.assignedById && (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Assigned by</dt>
+                    <dd className="flex items-center gap-1.5">
+                      <UserAvatar
+                        user={userById.get(incident.assignedById)}
+                        className="size-5"
+                      />
+                      {userById.get(incident.assignedById)?.name}
+                    </dd>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <dt className="text-muted-foreground">Reporter</dt>
                   <dd className="flex items-center gap-1.5">

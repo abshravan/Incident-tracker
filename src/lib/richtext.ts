@@ -15,6 +15,7 @@ export type Inline =
   | { type: "em"; value: string }
   | { type: "link"; text: string; href: string }
   | { type: "image"; alt: string; src: string }
+  | { type: "mention"; name: string; userId: string }
   | { type: "break" };
 
 export type Block =
@@ -24,10 +25,13 @@ export type Block =
 /** Attachment references use this scheme; the id resolves against IndexedDB. */
 export const ATTACHMENT_SCHEME = "att:";
 
+/** Mentions are stored structurally so a rename cannot break the link. */
+export const MENTION_SCHEME = "user:";
+
 const FENCE = /```([a-zA-Z0-9+#._-]*)[ \t]*\r?\n([\s\S]*?)```/g;
 
 const INLINE =
-  /(`[^`\n]+`)|(!\[[^\]]*\]\([^)\s]*\))|(\[[^\]\n]+\]\([^)\s]*\))|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*)/g;
+  /(`[^`\n]+`)|(@\[[^\]\n]+\]\(user:[^)\s]+\))|(!\[[^\]]*\]\([^)\s]*\))|(\[[^\]\n]+\]\([^)\s]*\))|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*)/g;
 
 const SAFE_LINK = /^(https?:\/\/|mailto:)/i;
 
@@ -73,6 +77,13 @@ function parseInlines(source: string): Inline[] {
 
     if (token.startsWith("`")) {
       out.push({ type: "code", value: token.slice(1, -1) });
+    } else if (token.startsWith("@[")) {
+      const name = token.slice(2, token.indexOf("]"));
+      const userId = token.slice(
+        token.indexOf("](") + 2 + MENTION_SCHEME.length,
+        -1
+      );
+      out.push({ type: "mention", name, userId });
     } else if (token.startsWith("![")) {
       const alt = token.slice(2, token.indexOf("]"));
       const raw = token.slice(token.indexOf("](") + 2, -1);
@@ -128,6 +139,23 @@ export function parseRichText(source: string): Block[] {
 
   pushProse(source.slice(lastIndex));
   return blocks;
+}
+
+/** Ids of everyone mentioned, so the caller can notify them. */
+export function mentionedUserIds(source: string): Set<string> {
+  const ids = new Set<string>();
+  for (const block of parseRichText(source)) {
+    if (block.type !== "paragraph") continue;
+    for (const inline of block.inlines) {
+      if (inline.type === "mention") ids.add(inline.userId);
+    }
+  }
+  return ids;
+}
+
+/** Renders a mention into the stored form. */
+export function formatMention(name: string, userId: string) {
+  return `@[${name}](${MENTION_SCHEME}${userId})`;
 }
 
 /** Ids of attachments rendered inline, so callers can avoid listing them twice. */

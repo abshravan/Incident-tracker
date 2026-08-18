@@ -11,7 +11,8 @@ import {
   formatBytes,
   putAttachment,
 } from "@/lib/attachments";
-import { ATTACHMENT_SCHEME } from "@/lib/richtext";
+import { ATTACHMENT_SCHEME, formatMention } from "@/lib/richtext";
+import { useIncidentStore } from "@/lib/store";
 import type { Attachment } from "@/lib/types";
 
 function newAttachmentId() {
@@ -51,6 +52,55 @@ export function RichTextEditor({
   const fileRef = React.useRef<HTMLInputElement>(null);
   const [preview, setPreview] = React.useState(false);
   const [dragging, setDragging] = React.useState(false);
+
+  const users = useIncidentStore((s) => s.users);
+  // An open "@" run immediately before the caret drives the mention menu.
+  const [mention, setMention] = React.useState<{
+    query: string;
+    start: number;
+  } | null>(null);
+  const [highlighted, setHighlighted] = React.useState(0);
+
+  const matches = React.useMemo(() => {
+    if (!mention) return [];
+    const q = mention.query.toLowerCase();
+    return users
+      .filter(
+        (u) =>
+          !q ||
+          u.name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().startsWith(q)
+      )
+      .slice(0, 5);
+  }, [mention, users]);
+
+  /** Opens the menu when the caret sits in an "@…" run, closes it otherwise. */
+  function syncMention(text: string, caret: number) {
+    const upto = text.slice(0, caret);
+    // Only after a boundary, so an email address does not open the menu.
+    const found = /(^|[\s(])@([\p{L}\p{N}._-]*)$/u.exec(upto);
+    if (!found) {
+      setMention(null);
+      return;
+    }
+    setMention({ query: found[2], start: caret - found[2].length - 1 });
+    setHighlighted(0);
+  }
+
+  function insertMention(user: (typeof users)[number]) {
+    const el = ref.current;
+    if (!el || !mention) return;
+    const before = value.slice(0, mention.start);
+    const after = value.slice(mention.start + 1 + mention.query.length);
+    const token = formatMention(user.name, user.id) + " ";
+    onChange(before + token + after);
+    setMention(null);
+    const caret = before.length + token.length;
+    window.requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(caret, caret);
+    });
+  }
 
   /** Replaces the current selection and restores the caret after it. */
   function replaceSelection(
@@ -200,15 +250,47 @@ export function RichTextEditor({
           <RichText source={value} empty="Nothing to preview yet." />
         </div>
       ) : (
+        <div className="relative">
         <textarea
           id={id}
           ref={ref}
           rows={rows}
           autoFocus={autoFocus}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            onChange(e.target.value);
+            syncMention(e.target.value, e.target.selectionStart);
+          }}
+          onClick={(e) =>
+            syncMention(value, e.currentTarget.selectionStart ?? 0)
+          }
+          onBlur={() => window.setTimeout(() => setMention(null), 120)}
           placeholder={placeholder}
           onKeyDown={(e) => {
+            if (mention && matches.length > 0) {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setHighlighted((h) => (h + 1) % matches.length);
+                return;
+              }
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHighlighted(
+                  (h) => (h - 1 + matches.length) % matches.length
+                );
+                return;
+              }
+              if (e.key === "Enter" || e.key === "Tab") {
+                e.preventDefault();
+                insertMention(matches[highlighted]);
+                return;
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                setMention(null);
+                return;
+              }
+            }
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
               e.preventDefault();
               onSubmitShortcut?.();
@@ -242,10 +324,41 @@ export function RichTextEditor({
             dragging && "border-primary bg-primary/5"
           )}
         />
+
+        {mention && matches.length > 0 && (
+          <div className="bg-popover absolute bottom-full left-2 z-20 mb-1 w-60 overflow-hidden rounded-lg border p-1 shadow-lg">
+            {matches.map((u, index) => (
+              <button
+                key={u.id}
+                type="button"
+                // The textarea blurs before click lands, so commit on mousedown.
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  insertMention(u);
+                }}
+                onMouseEnter={() => setHighlighted(index)}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs",
+                  index === highlighted && "bg-accent"
+                )}
+              >
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ background: u.avatarColor }}
+                  aria-hidden
+                />
+                <span className="flex-1 truncate font-medium">{u.name}</span>
+                <span className="text-muted-foreground truncate">{u.team}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        </div>
       )}
 
       <p className="text-muted-foreground text-[11px]">
-        Paste or drop a screenshot to embed it. Use{" "}
+        Type <code className="bg-muted rounded px-1 py-0.5 font-mono">@</code> to
+        mention someone. Paste or drop a screenshot to embed it. Use{" "}
         <code className="bg-muted rounded px-1 py-0.5 font-mono">```</code> for a
         code block.
       </p>

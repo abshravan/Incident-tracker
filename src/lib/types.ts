@@ -84,6 +84,8 @@ export interface Incident {
   attachments: Attachment[];
   reporterId: string;
   assigneeId: string | null;
+  /** Who put the current assignee on it — they can set the ETA too. */
+  assignedById: string | null;
   createdAt: string;
   updatedAt: string;
   acknowledgedAt: string | null;
@@ -181,6 +183,38 @@ export const PRIORITY_META: Record<
     chart: "var(--pri-4)",
     targetMinutes: 4320,
   },
+};
+
+export type NotificationKind =
+  | "assigned"
+  | "mention"
+  | "comment"
+  | "status"
+  | "priority"
+  | "eta";
+
+export interface Notification {
+  id: string;
+  /** Recipient. */
+  userId: string;
+  incidentId: string;
+  kind: NotificationKind;
+  message: string;
+  actorId: string;
+  at: string;
+  readAt: string | null;
+}
+
+export const NOTIFICATION_META: Record<
+  NotificationKind,
+  { label: string; dot: string }
+> = {
+  assigned: { label: "Assigned", dot: "bg-violet-500" },
+  mention: { label: "Mention", dot: "bg-primary" },
+  comment: { label: "Comment", dot: "bg-muted-foreground" },
+  status: { label: "Status", dot: "bg-sky-500" },
+  priority: { label: "Priority", dot: "bg-amber-500" },
+  eta: { label: "ETA", dot: "bg-teal-500" },
 };
 
 export const IMPACT_META: Record<Impact, { label: string }> = {

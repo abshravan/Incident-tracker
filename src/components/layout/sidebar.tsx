@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import {
   AlertTriangle,
   BarChart3,
+  Bell,
   KanbanSquare,
   LayoutDashboard,
   ListChecks,
@@ -17,6 +18,7 @@ import { useIncidentStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { can, type Capability } from "@/lib/permissions";
 import { isOpen } from "@/lib/metrics";
+import { useNotifications } from "@/hooks/use-notifications";
 
 interface NavItem {
   href: string;
@@ -30,6 +32,7 @@ const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/board", label: "Board", icon: KanbanSquare },
   { href: "/incidents", label: "Incidents", icon: ListChecks },
+  { href: "/notifications", label: "Notifications", icon: Bell },
   {
     href: "/analytics",
     label: "Analytics",
@@ -45,6 +48,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const incidents = useIncidentStore((s) => s.incidents);
   const { user } = useAuth();
   const openCount = incidents.filter(isOpen).length;
+  const { unread } = useNotifications();
   const nav = NAV.filter((item) => !item.requires || can(user, item.requires));
   const canResetData = can(user, "reset-demo-data");
 
@@ -99,6 +103,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             {item.href === "/incidents" && openCount > 0 && (
               <span className="bg-primary/10 text-primary relative ml-auto rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums">
                 {openCount}
+              </span>
+            )}
+            {item.href === "/notifications" && unread > 0 && (
+              <span className="bg-primary text-primary-foreground relative ml-auto rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums">
+                {unread}
               </span>
             )}
           </Link>

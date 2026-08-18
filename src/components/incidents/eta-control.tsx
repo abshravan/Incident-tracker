@@ -108,7 +108,7 @@ export function EtaControl({
             format(eta, "MMM d, HH:mm")
           ) : (
             <span className="text-muted-foreground">
-              Not set — the assignee can add one
+              Not set — the assignee or whoever assigned it can add one
             </span>
           )}
         </p>
