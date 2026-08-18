@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { useIncidentStore } from "@/lib/store";
 import { useNow } from "@/hooks/use-now";
+import { displayName } from "@/lib/users";
 import { referencedAttachmentIds } from "@/lib/richtext";
 import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/lib/auth";
@@ -203,7 +204,7 @@ export default function IncidentDetailPage() {
             {incident.title}
           </h1>
           <p className="text-muted-foreground mt-1.5 text-sm">
-            Reported by {reporter?.name ?? "someone"}{" "}
+            Reported by {displayName(reporter)}{" "}
             {formatDistanceToNow(new Date(incident.createdAt), { addSuffix: true })}
             {service && ` · ${service.name}`}
           </p>
@@ -266,7 +267,7 @@ export default function IncidentDetailPage() {
                           <div className="min-w-0 flex-1">
                             <p className="text-sm">
                               <span className="font-medium">
-                                {author?.name ?? "Someone"}
+                                {displayName(author)}
                               </span>{" "}
                               {event.kind === "comment" ? (
                                 <span className="text-muted-foreground">
@@ -524,7 +525,7 @@ export default function IncidentDetailPage() {
                         user={userById.get(incident.assignedById)}
                         className="size-5"
                       />
-                      {userById.get(incident.assignedById)?.name}
+                      {displayName(userById.get(incident.assignedById))}
                     </dd>
                   </div>
                 )}
@@ -532,7 +533,7 @@ export default function IncidentDetailPage() {
                   <dt className="text-muted-foreground">Reporter</dt>
                   <dd className="flex items-center gap-1.5">
                     <UserAvatar user={reporter} className="size-5" />
-                    {reporter?.name}
+                    {displayName(reporter)}
                   </dd>
                 </div>
               </dl>

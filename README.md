@@ -15,6 +15,7 @@ Built with **Next.js 16 (App Router)**, **shadcn/ui**, **Tailwind CSS v4**,
 | `/board` | Drag-and-drop kanban across Triage → Investigating → Mitigating → Monitoring → Resolved, filterable by priority, service and assignee (the avatar strip filters in one click) |
 | `/incidents` | Sortable table of every incident, filterable by search, status, priority, service and assignee |
 | `/notifications` | Your inbox: assignments, mentions, and activity on incidents you own |
+| `/users` | **Admin only.** People directory — add accounts, set access levels, and (super admin) remove them |
 | `/incidents/[id]` | Rich-text timeline and comments, evidence (call IDs + attachments), priority/status/assignee/ETA controls, and the response clock |
 | `/analytics` | **Admin only.** 7/30/90-day windows: trends, per-service reliability and workload per person, each chart backed by a table |
 | `/team` | Per-person queues and per-service health; resolved/MTTR stats are admin only |
@@ -48,27 +49,40 @@ both pickable — filing on someone else's behalf is recorded in the timeline as
 
 ### Access levels
 
-Two levels, `admin` and `user`, set per account in
-[`src/lib/seed.ts`](src/lib/seed.ts). Everyone can report and work incidents;
-admins additionally get:
+Three levels, managed from `/users`. Everyone can report and work incidents;
+each level adds to the one below it:
 
-| Capability | User | Admin |
-|---|:--:|:--:|
-| Report, edit, assign and resolve incidents | ✅ | ✅ |
-| Dashboard, board, incidents, team | ✅ | ✅ |
-| Analytics page | — | ✅ |
-| Per-person resolved/MTTR stats on Team | — | ✅ |
-| Delete an incident | — | ✅ |
-| Reset demo data | — | ✅ |
+| Capability | User | Admin | Super admin |
+|---|:--:|:--:|:--:|
+| Report, edit, assign and resolve incidents | ✅ | ✅ | ✅ |
+| Dashboard, board, incidents, team, notifications | ✅ | ✅ | ✅ |
+| Analytics page | — | ✅ | ✅ |
+| Per-person resolved/MTTR stats on Team | — | ✅ | ✅ |
+| Delete an incident · reset demo data | — | ✅ | ✅ |
+| Add users, and set them to User or Admin | — | ✅ | ✅ |
+| Change an existing admin, grant Super admin | — | — | ✅ |
+| Remove an account | — | — | ✅ |
+
+Three rules keep the tiers from collapsing into each other, enforced in
+`canEditUser` / `canDeleteUser` / `canDemote`:
+
+- **Nobody changes their own level** — that is how someone locks themselves out.
+- **An admin cannot edit another admin.** Governing admins is what the tier
+  above them is for.
+- **The last super admin cannot be demoted or removed**, so the top tier is
+  never empty.
+
+Removing an account returns its open incidents to unassigned and drops its
+notifications, but leaves history alone — who reported an incident and who
+wrote each comment stay on the record, rendered as "Removed user".
 
 The matrix lives in [`src/lib/permissions.ts`](src/lib/permissions.ts) — call
-sites ask `can(user, "view-analytics")` rather than comparing roles, so adding
-a third level is a change to that one table. Hiding a nav entry is not a
-control on its own, so gated pages also check the capability themselves via
-`<RequireCapability>`.
+sites ask `can(user, "manage-users")` rather than comparing roles. Hiding a nav
+entry is not a control on its own, so gated pages also check the capability
+themselves via `<RequireCapability>`.
 
-Ava and Kai are admins in the demo data; the other four are users. Switch
-between them in Settings to see the difference.
+Ava is the super admin in the demo data and Kai an admin; the rest are users.
+Switch between them in Settings to see the difference.
 
 ### Rich text in descriptions and comments
 

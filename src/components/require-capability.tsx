@@ -8,6 +8,12 @@ import { Card } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth";
 import { can, ROLE_META, type Capability } from "@/lib/permissions";
 
+/** The level a refused page actually needs, so the message is not guesswork. */
+const REQUIRED_LEVEL: Partial<Record<Capability, string>> = {
+  "manage-admins": "Super admins only",
+  "delete-users": "Super admins only",
+};
+
 /**
  * Route-level gate. Hiding the nav entry is not a control on its own — someone
  * can still type the URL — so the page itself checks the capability and
@@ -36,7 +42,7 @@ export function RequireCapability({
             <Lock className="size-4" />
           </span>
           <h1 className="mt-3 text-base font-semibold tracking-tight">
-            Admins only
+            {REQUIRED_LEVEL[capability] ?? "Admins only"}
           </h1>
           <p className="text-muted-foreground mt-1.5 text-sm leading-relaxed">
             You are signed in as{" "}

@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useIncidentStore } from "@/lib/store";
 import { useNow } from "@/hooks/use-now";
+import { displayName } from "@/lib/users";
 import { useAuth } from "@/lib/auth";
 import { stagger } from "@/lib/motion";
 import {
@@ -323,7 +324,7 @@ export default function DashboardPage() {
                 >
                   <UserAvatar user={author} className="mt-0.5 size-7 shrink-0" />
                   <span className="min-w-0 flex-1 text-sm">
-                    <span className="font-medium">{author?.name}</span>{" "}
+                    <span className="font-medium">{displayName(author)}</span>{" "}
                     <span className="text-muted-foreground">
                       {event.kind === "comment"
                         ? `commented on ${incident.key}`

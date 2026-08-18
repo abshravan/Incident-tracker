@@ -22,7 +22,7 @@ function mulberry32(seed: number) {
 }
 
 export const USERS: User[] = [
-  { id: "u1", name: "Ava Mehta", email: "ava@acme.io", role: "admin", team: "Platform", avatarColor: "#2a78d6" },
+  { id: "u1", name: "Ava Mehta", email: "ava@acme.io", role: "superadmin", team: "Platform", avatarColor: "#2a78d6" },
   { id: "u2", name: "Diego Rivera", email: "diego@acme.io", role: "user", team: "Backend", avatarColor: "#b1481f" },
   { id: "u3", name: "Lena Osei", email: "lena@acme.io", role: "user", team: "Frontend", avatarColor: "#12775a" },
   { id: "u4", name: "Kai Tanaka", email: "kai@acme.io", role: "admin", team: "SRE", avatarColor: "#8a5c00" },

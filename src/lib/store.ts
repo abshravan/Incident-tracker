@@ -8,6 +8,7 @@ import { mentionedUserIds } from "./richtext";
 import type {
   Attachment,
   Incident,
+  Role,
   IncidentStatus,
   Notification,
   NotificationKind,
@@ -16,6 +17,13 @@ import type {
   TimelineEvent,
   User,
 } from "./types";
+
+export interface NewUserInput {
+  name: string;
+  email: string;
+  team: string;
+  role: Role;
+}
 
 export interface NewIncidentInput {
   title: string;
@@ -65,6 +73,9 @@ interface IncidentState {
     actorId: string,
     attachments?: Attachment[]
   ) => void;
+  createUser: (input: NewUserInput) => User;
+  updateUserRole: (userId: string, role: Role) => void;
+  deleteUser: (userId: string) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: (userId: string) => void;
   clearReadNotifications: (userId: string) => void;
@@ -72,6 +83,18 @@ interface IncidentState {
   setEta: (incidentId: string, eta: string | null, actorId: string) => void;
   deleteIncident: (id: string) => void;
 }
+
+/** Avatar fills for accounts added after seeding. */
+const AVATAR_COLORS = [
+  "#2a78d6",
+  "#b1481f",
+  "#12775a",
+  "#8a5c00",
+  "#b0466f",
+  "#5b4bb8",
+  "#0f6f7a",
+  "#7a3f9d",
+];
 
 const uid = () =>
   `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -492,6 +515,47 @@ export const useIncidentStore = create<IncidentState>()(
         }));
       },
 
+      createUser: (input) => {
+        const existing = get().users;
+        const user: User = {
+          id: uid(),
+          name: input.name.trim(),
+          email: input.email.trim().toLowerCase(),
+          team: input.team.trim() || "Unassigned",
+          role: input.role,
+          avatarColor: AVATAR_COLORS[existing.length % AVATAR_COLORS.length],
+        };
+        set({ users: [...existing, user] });
+        return user;
+      },
+
+      updateUserRole: (userId, role) =>
+        set((state) => ({
+          users: state.users.map((u) =>
+            u.id === userId ? { ...u, role } : u
+          ),
+        })),
+
+      deleteUser: (userId) =>
+        set((state) => ({
+          users: state.users.filter((u) => u.id !== userId),
+          // Their open work goes back to the pool rather than pointing at an
+          // account that no longer exists. Historical references — who reported
+          // it, who wrote a comment — are left alone as the record of what
+          // happened.
+          incidents: state.incidents.map((i) =>
+            i.assigneeId === userId || i.assignedById === userId
+              ? {
+                  ...i,
+                  assigneeId: i.assigneeId === userId ? null : i.assigneeId,
+                  assignedById:
+                    i.assignedById === userId ? null : i.assignedById,
+                }
+              : i
+          ),
+          notifications: state.notifications.filter((n) => n.userId !== userId),
+        })),
+
       markNotificationRead: (id) =>
         set((state) => ({
           notifications: state.notifications.map((n) =>
@@ -538,13 +602,14 @@ export const useIncidentStore = create<IncidentState>()(
     }),
     {
       name: "incident-tracker/data",
-      // v5 added assignedById and the notification inbox. Older payloads are
-      // discarded and reseeded rather than migrated.
-      version: 5,
+      // v6 persists the user directory, which admins can now edit. Older
+      // payloads are discarded and reseeded rather than migrated.
+      version: 6,
       migrate: () => ({
         incidents: [],
         events: [],
         notifications: [],
+        users: USERS,
         seededAt: null,
       }),
       storage: createJSONStorage(() => localStorage),
@@ -552,6 +617,8 @@ export const useIncidentStore = create<IncidentState>()(
         incidents: state.incidents,
         events: state.events,
         notifications: state.notifications,
+        // Persisted now that admins can add, re-role and remove accounts.
+        users: state.users,
         seededAt: state.seededAt,
       }),
     }

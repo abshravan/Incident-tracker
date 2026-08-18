@@ -24,6 +24,7 @@ import { CreateIncidentDialog } from "@/components/incidents/create-incident-dia
 import { useAuth } from "@/lib/auth";
 import { useIncidentStore } from "@/lib/store";
 import { ROLE_META } from "@/lib/permissions";
+import { cn } from "@/lib/utils";
 import { useNotifications } from "@/hooks/use-notifications";
 
 function CommandPalette({
@@ -180,11 +181,10 @@ export function Topbar() {
                   {user?.name}
                   {user && (
                     <span
-                      className={
-                        user.role === "admin"
-                          ? "bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px] font-semibold"
-                          : "bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px] font-semibold"
-                      }
+                      className={cn(
+                        "rounded border px-1.5 py-0.5 text-[10px] font-semibold",
+                        ROLE_META[user.role].className
+                      )}
                     >
                       {ROLE_META[user.role].label}
                     </span>

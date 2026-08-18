@@ -15,6 +15,7 @@ import { useIncidentStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { useNotifications } from "@/hooks/use-notifications";
 import { NOTIFICATION_META } from "@/lib/types";
+import { displayName } from "@/lib/users";
 import { cn } from "@/lib/utils";
 
 const VERB: Record<string, string> = {
@@ -124,7 +125,7 @@ export default function NotificationsPage() {
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm">
                         <span className="font-medium">
-                          {actor?.name ?? "Someone"}
+                          {displayName(actor)}
                         </span>{" "}
                         <span className="text-muted-foreground">
                           {VERB[notification.kind] ?? "updated this"}

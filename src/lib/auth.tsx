@@ -10,7 +10,7 @@
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useMounted } from "@/hooks/use-mounted";
-import { USERS } from "./seed";
+import { useIncidentStore } from "./store";
 import type { User } from "./types";
 
 const STORAGE_KEY = "incident-tracker/session";
@@ -58,7 +58,7 @@ interface AuthContextValue {
   /** False until hydration finishes — do not redirect before this is true. */
   ready: boolean;
   signIn: (userId: string) => void;
-  signInWithEmail: (email: string) => User;
+  signInWithEmail: (email: string) => User | undefined;
   signOut: () => void;
 }
 
@@ -71,31 +71,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getServerSessionId
   );
   const ready = useMounted();
+  // The directory is editable, so the session resolves against the live store
+  // rather than the seed constant: a role change takes effect immediately, and
+  // a deleted account stops resolving.
+  const users = useIncidentStore((s) => s.users);
 
   const user = React.useMemo(
-    () => USERS.find((u) => u.id === sessionId) ?? null,
-    [sessionId]
+    () => users.find((u) => u.id === sessionId) ?? null,
+    [users, sessionId]
   );
 
   const value = React.useMemo<AuthContextValue>(
     () => ({
       user,
-      users: USERS,
+      users,
       ready,
       signIn: (userId: string) => {
-        const found = USERS.find((u) => u.id === userId);
+        const found = users.find((u) => u.id === userId);
         if (found) setSessionId(found.id);
       },
       signInWithEmail: (email: string) => {
         const normalized = email.trim().toLowerCase();
         const found =
-          USERS.find((u) => u.email.toLowerCase() === normalized) ?? USERS[0];
+          users.find((u) => u.email.toLowerCase() === normalized) ?? users[0];
         setSessionId(found.id);
         return found;
       },
       signOut: () => setSessionId(null),
     }),
-    [user, ready]
+    [user, users, ready]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

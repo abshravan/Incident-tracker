@@ -21,6 +21,7 @@ import {
 import { useMounted } from "@/hooks/use-mounted";
 import { useCan } from "@/hooks/use-can";
 import { ROLE_META } from "@/lib/permissions";
+import { cn } from "@/lib/utils";
 import { useIncidentStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { fadeUp, stagger } from "@/lib/motion";
@@ -65,11 +66,10 @@ export default function SettingsPage() {
                   {user?.name}
                   {user && (
                     <span
-                      className={
-                        user.role === "admin"
-                          ? "bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px] font-semibold"
-                          : "bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px] font-semibold"
-                      }
+                      className={cn(
+                        "rounded border px-1.5 py-0.5 text-[10px] font-semibold",
+                        ROLE_META[user.role].className
+                      )}
                       title={ROLE_META[user.role].blurb}
                     >
                       {ROLE_META[user.role].label}

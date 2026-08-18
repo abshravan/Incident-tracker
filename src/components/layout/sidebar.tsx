@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Settings,
+  UserCog,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,12 @@ const NAV: NavItem[] = [
     requires: "view-analytics",
   },
   { href: "/team", label: "Team", icon: Users },
+  {
+    href: "/users",
+    label: "Users",
+    icon: UserCog,
+    requires: "manage-users",
+  },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
