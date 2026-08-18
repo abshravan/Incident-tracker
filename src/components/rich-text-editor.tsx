@@ -2,8 +2,22 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Bold, Code2, Eye, ImagePlus, Italic, Pencil } from "lucide-react";
+import {
+  Bold,
+  ChevronDown,
+  Code2,
+  Eye,
+  ImagePlus,
+  Italic,
+  Pencil,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { RichText } from "@/components/rich-text";
 import { cn } from "@/lib/utils";
 import {
@@ -14,6 +28,20 @@ import {
 import { ATTACHMENT_SCHEME, formatMention } from "@/lib/richtext";
 import { useIncidentStore } from "@/lib/store";
 import type { Attachment } from "@/lib/types";
+
+/** Languages offered on the code-block button; the label becomes the fence. */
+const CODE_LANGUAGES = [
+  { value: "", label: "Plain text" },
+  { value: "ts", label: "TypeScript" },
+  { value: "js", label: "JavaScript" },
+  { value: "py", label: "Python" },
+  { value: "bash", label: "Shell" },
+  { value: "json", label: "JSON" },
+  { value: "sql", label: "SQL" },
+  { value: "go", label: "Go" },
+  { value: "java", label: "Java" },
+  { value: "yaml", label: "YAML" },
+];
 
 function newAttachmentId() {
   return `att_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -33,6 +61,8 @@ export function RichTextEditor({
   onAttachmentsChange,
   placeholder,
   rows = 5,
+  /** Floor for both the editor and the preview, so toggling does not jump. */
+  minHeight = 96,
   className,
   autoFocus,
   onSubmitShortcut,
@@ -44,6 +74,7 @@ export function RichTextEditor({
   onAttachmentsChange: (next: Attachment[]) => void;
   placeholder?: string;
   rows?: number;
+  minHeight?: number;
   className?: string;
   autoFocus?: boolean;
   onSubmitShortcut?: () => void;
@@ -129,11 +160,92 @@ export function RichTextEditor({
     );
   }
 
-  function insertCodeBlock() {
+  function insertCodeBlock(lang = "") {
+    const el = ref.current;
+    // A fence only works at the start of a line, so break out of one first.
+    const caret = el?.selectionStart ?? value.length;
+    const lead = caret > 0 && value[caret - 1] !== "\n" ? "\n" : "";
+    const fence = lead + "```" + lang;
+
     replaceSelection((selected) => {
-      if (selected) return { text: "```\n" + selected + "\n```\n" };
-      return { text: "```\n\n```\n", caretOffset: 4 };
+      if (selected) return { text: `${fence}\n${selected}\n\`\`\`\n` };
+      // Land the caret on the empty line between the fences.
+      return { text: `${fence}\n\n\`\`\`\n`, caretOffset: fence.length + 1 };
     });
+  }
+
+  /** An odd number of fences before the caret means we are inside a block. */
+  function insideFence(text: string, caret: number) {
+    const opens = text.slice(0, caret).match(/```/g);
+    return !!opens && opens.length % 2 === 1;
+  }
+
+  /** Tab indents code instead of leaving the field, but only inside a fence. */
+  function handleIndent(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const el = ref.current;
+    if (!el) return false;
+    const { selectionStart: start, selectionEnd: end } = el;
+    if (!insideFence(value, start)) return false;
+
+    const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+    const lineEnd = value.indexOf("\n", end);
+    const blockEnd = lineEnd === -1 ? value.length : lineEnd;
+    const block = value.slice(lineStart, blockEnd);
+    const multiline = block.includes("\n");
+
+    if (event.shiftKey) {
+      const outdented = block.replace(/^ {1,2}/gm, "");
+      const removed = block.length - outdented.length;
+      if (removed === 0) return true;
+      onChange(value.slice(0, lineStart) + outdented + value.slice(blockEnd));
+      const caret = Math.max(lineStart, start - Math.min(2, removed));
+      window.requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(caret, Math.max(caret, end - removed));
+      });
+      return true;
+    }
+
+    if (multiline) {
+      const indented = block.replace(/^/gm, "  ");
+      const added = indented.length - block.length;
+      onChange(value.slice(0, lineStart) + indented + value.slice(blockEnd));
+      window.requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start + 2, end + added);
+      });
+    } else {
+      onChange(value.slice(0, start) + "  " + value.slice(end));
+      window.requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start + 2, start + 2);
+      });
+    }
+    return true;
+  }
+
+  /**
+   * Enter on a lone opening fence closes it, so typing ``` and pressing Enter
+   * leaves you writing inside a finished block.
+   */
+  function handleFenceClose(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const el = ref.current;
+    if (!el || event.shiftKey) return false;
+    const caret = el.selectionStart;
+    if (caret !== el.selectionEnd) return false;
+    const lineStart = value.lastIndexOf("\n", caret - 1) + 1;
+    const line = value.slice(lineStart, caret);
+    if (!/^```[a-zA-Z0-9+#._-]*$/.test(line)) return false;
+    // Only when it is not already closed further down.
+    if (insideFence(value, caret) === false) return false;
+
+    const insert = "\n\n```\n";
+    onChange(value.slice(0, caret) + insert + value.slice(caret));
+    window.requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(caret + 1, caret + 1);
+    });
+    return true;
   }
 
   const insertImages = React.useCallback(
@@ -205,16 +317,50 @@ export function RichTextEditor({
         >
           <Italic className="size-3.5" />
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Code block"
-          onClick={insertCodeBlock}
-          disabled={preview}
-        >
-          <Code2 className="size-3.5" />
-        </Button>
+        <div className="flex items-center">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 pr-1.5"
+            aria-label="Code block"
+            title="Code block (⌘E)"
+            onClick={() => insertCodeBlock()}
+            disabled={preview}
+          >
+            <Code2 className="size-3.5" />
+            Code
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="size-7"
+                aria-label="Choose code language"
+                disabled={preview}
+              >
+                <ChevronDown className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-40">
+              {CODE_LANGUAGES.map((lang) => (
+                <DropdownMenuItem
+                  key={lang.value || "plain"}
+                  onClick={() => insertCodeBlock(lang.value)}
+                >
+                  {lang.label}
+                  {lang.value && (
+                    <span className="text-muted-foreground ml-auto font-mono text-[10px]">
+                      {lang.value}
+                    </span>
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         <Button
           type="button"
           variant="ghost"
@@ -246,7 +392,10 @@ export function RichTextEditor({
       </div>
 
       {preview ? (
-        <div className="border-input min-h-24 rounded-md border px-3 py-2.5">
+        <div
+          className="border-input overflow-y-auto rounded-md border px-3 py-2.5"
+          style={{ minHeight }}
+        >
           <RichText source={value} empty="Nothing to preview yet." />
         </div>
       ) : (
@@ -255,6 +404,7 @@ export function RichTextEditor({
           id={id}
           ref={ref}
           rows={rows}
+          style={{ minHeight }}
           autoFocus={autoFocus}
           value={value}
           onChange={(e) => {
@@ -291,6 +441,19 @@ export function RichTextEditor({
                 return;
               }
             }
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") {
+              e.preventDefault();
+              insertCodeBlock();
+              return;
+            }
+            if (e.key === "Tab" && handleIndent(e)) {
+              e.preventDefault();
+              return;
+            }
+            if (e.key === "Enter" && handleFenceClose(e)) {
+              e.preventDefault();
+              return;
+            }
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
               e.preventDefault();
               onSubmitShortcut?.();
@@ -319,7 +482,7 @@ export function RichTextEditor({
             setDragging(false);
           }}
           className={cn(
-            "border-input placeholder:text-muted-foreground min-h-24 w-full rounded-md border bg-transparent px-3 py-2 font-mono text-[13px] shadow-sm transition-[color,box-shadow] outline-none",
+            "border-input placeholder:text-muted-foreground w-full resize-y rounded-md border bg-transparent px-3 py-2 font-mono text-[13px] leading-relaxed shadow-sm transition-[color,box-shadow] outline-none",
             "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
             dragging && "border-primary bg-primary/5"
           )}
@@ -357,10 +520,11 @@ export function RichTextEditor({
       )}
 
       <p className="text-muted-foreground text-[11px]">
-        Type <code className="bg-muted rounded px-1 py-0.5 font-mono">@</code> to
-        mention someone. Paste or drop a screenshot to embed it. Use{" "}
-        <code className="bg-muted rounded px-1 py-0.5 font-mono">```</code> for a
-        code block.
+        <code className="bg-muted rounded px-1 py-0.5 font-mono">@</code> to
+        mention someone ·{" "}
+        <code className="bg-muted rounded px-1 py-0.5 font-mono">```</code> then
+        Enter for a code block, Tab to indent inside one · paste or drop a
+        screenshot to embed it.
       </p>
 
       <input

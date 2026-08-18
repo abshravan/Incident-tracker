@@ -172,7 +172,8 @@ export function CreateIncidentDialog({
             <Label htmlFor="description">What is happening?</Label>
             <RichTextEditor
               id="description"
-              rows={4}
+              rows={12}
+              minHeight={260}
               placeholder="Symptoms, blast radius, first signal, anything already ruled out."
               value={description}
               onChange={setDescription}

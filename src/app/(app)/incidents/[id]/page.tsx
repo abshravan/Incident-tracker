@@ -306,7 +306,8 @@ export default function IncidentDetailPage() {
                       onChange={setDraft}
                       attachments={draftAttachments}
                       onAttachmentsChange={setDraftAttachments}
-                      rows={3}
+                      rows={4}
+                      minHeight={120}
                       placeholder="Post an update — what you tried, what you saw, what is next."
                       onSubmitShortcut={() => {
                         if (draft.trim()) submitComment();

@@ -74,8 +74,21 @@ between them in Settings to see the difference.
 
 Descriptions and comments accept a small markdown subset — fenced code blocks,
 inline code, images, links, bold and italic. Paste or drop a screenshot into
-either and it is embedded inline; the toolbar inserts a code fence, and a
-preview toggle shows the rendered result.
+either and it is embedded inline, and a preview toggle shows the rendered
+result.
+
+Code blocks are the part you touch most, so they get some help:
+
+- **Code** on the toolbar wraps the selection, or opens an empty block with the
+  caret already inside; the caret next to it picks a language for the fence.
+- Typing <code>```</code> and pressing **Enter** closes the fence for you.
+- **Tab** and **Shift+Tab** indent and outdent *inside* a block — outside one,
+  Tab still moves focus, so keyboard navigation is not trapped.
+- **⌘/Ctrl+E** inserts a block from the keyboard.
+- A fence always lands on its own line, even when inserted mid-sentence.
+
+The description field on the report dialog is sized for real pasted output and
+can be dragged taller.
 
 The value stored is plain text, so a real backend can take it unchanged.
 [`src/lib/richtext.ts`](src/lib/richtext.ts) parses it to tokens and
