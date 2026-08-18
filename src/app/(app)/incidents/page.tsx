@@ -71,7 +71,15 @@ export default function IncidentsPage() {
     return incidents
       .filter((incident) => {
         if (q) {
-          const haystack = `${incident.key} ${incident.title} ${incident.labels.join(" ")}`.toLowerCase();
+          const haystack = [
+            incident.key,
+            incident.title,
+            incident.env,
+            ...incident.botCallIds,
+            ...incident.voicestackCallIds,
+          ]
+            .join(" ")
+            .toLowerCase();
           if (!haystack.includes(q)) return false;
         }
         if (priority !== "all" && incident.priority !== priority) return false;
@@ -109,7 +117,7 @@ export default function IncidentsPage() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by title, key or label…"
+              placeholder="Search by title, key, env or call ID…"
               className="pl-9"
             />
           </div>
@@ -222,17 +230,10 @@ export default function IncidentsPage() {
                       >
                         {incident.title}
                       </Link>
-                      {incident.labels.length > 0 && (
-                        <div className="mt-1 flex gap-1">
-                          {incident.labels.slice(0, 3).map((label) => (
-                            <span
-                              key={label}
-                              className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px]"
-                            >
-                              {label}
-                            </span>
-                          ))}
-                        </div>
+                      {incident.env && (
+                        <span className="text-muted-foreground mt-1 block font-mono text-[10px]">
+                          {incident.env}
+                        </span>
                       )}
                     </TableCell>
                     <TableCell className="p-3">

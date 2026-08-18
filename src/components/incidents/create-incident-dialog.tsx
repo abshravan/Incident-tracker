@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CallIdInput } from "./call-id-input";
+import { AttachmentPicker } from "./attachment-picker";
 import { useIncidentStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import {
@@ -33,24 +36,14 @@ import {
   PRIORITY_META,
   STATUSES,
   STATUS_META,
+  type Attachment,
   type Impact,
   type IncidentStatus,
   type Priority,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-// Kept in sync with the label pool in src/lib/seed.ts.
-const LABEL_SUGGESTIONS = [
-  "regression",
-  "deploy",
-  "third-party",
-  "capacity",
-  "security",
-  "data",
-  "customer-reported",
-  "monitoring-gap",
-  "rollback",
-];
+const ENV_SUGGESTIONS = ["prod-us-east-1", "prod-eu-west-1", "staging", "dev"];
 
 export function CreateIncidentDialog({
   trigger,
@@ -71,9 +64,13 @@ export function CreateIncidentDialog({
   const [priority, setPriority] = React.useState<Priority>("P3");
   const [impact, setImpact] = React.useState<Impact>("minor");
   const [status, setStatus] = React.useState<IncidentStatus>(defaultStatus);
-  const [serviceId, setServiceId] = React.useState(services[0]?.id ?? "s1");
+  const [serviceId, setServiceId] = React.useState(services[0]?.id ?? "frontend");
+  const [env, setEnv] = React.useState("");
+  const [botCallIds, setBotCallIds] = React.useState<string[]>([]);
+  const [voicestackCallIds, setVoicestackCallIds] = React.useState<string[]>([]);
+  const [attachments, setAttachments] = React.useState<Attachment[]>([]);
+  const [reporterId, setReporterId] = React.useState<string>(user?.id ?? "");
   const [assigneeId, setAssigneeId] = React.useState<string>("unassigned");
-  const [labels, setLabels] = React.useState<string[]>([]);
 
   function reset() {
     setTitle("");
@@ -81,15 +78,13 @@ export function CreateIncidentDialog({
     setPriority("P3");
     setImpact("minor");
     setStatus(defaultStatus);
-    setServiceId(services[0]?.id ?? "s1");
+    setServiceId(services[0]?.id ?? "frontend");
+    setEnv("");
+    setBotCallIds([]);
+    setVoicestackCallIds([]);
+    setAttachments([]);
+    setReporterId(user?.id ?? "");
     setAssigneeId("unassigned");
-    setLabels([]);
-  }
-
-  function toggleLabel(label: string) {
-    setLabels((prev) =>
-      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
-    );
   }
 
   function submit(event: React.FormEvent) {
@@ -104,8 +99,12 @@ export function CreateIncidentDialog({
         impact,
         serviceId,
         status,
+        env,
+        botCallIds,
+        voicestackCallIds,
+        attachments,
+        reporterId: reporterId || user.id,
         assigneeId: assigneeId === "unassigned" ? null : assigneeId,
-        labels,
       },
       user.id
     );
@@ -127,6 +126,7 @@ export function CreateIncidentDialog({
       onOpenChange={(next) => {
         setOpen(next);
         if (!next) reset();
+        else setReporterId(user?.id ?? "");
       }}
     >
       <DialogTrigger asChild>
@@ -137,7 +137,7 @@ export function CreateIncidentDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-h-[88dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Report an incident</DialogTitle>
           <DialogDescription>
@@ -153,7 +153,7 @@ export function CreateIncidentDialog({
               id="title"
               autoFocus
               required
-              placeholder="Checkout returning 5xx for EU customers"
+              placeholder="Bot dropped the call after the transfer prompt"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
@@ -173,15 +173,15 @@ export function CreateIncidentDialog({
           <div className="grid gap-2">
             <Label>Priority</Label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {PRIORITIES.map((s) => {
-                const meta = PRIORITY_META[s];
-                const active = priority === s;
+              {PRIORITIES.map((p) => {
+                const meta = PRIORITY_META[p];
+                const active = priority === p;
                 return (
                   <motion.button
-                    key={s}
+                    key={p}
                     type="button"
                     whileTap={{ scale: 0.97 }}
-                    onClick={() => setPriority(s)}
+                    onClick={() => setPriority(p)}
                     className={cn(
                       "relative rounded-lg border px-3 py-2 text-left transition-colors",
                       active
@@ -203,7 +203,7 @@ export function CreateIncidentDialog({
                         style={{ background: meta.chart }}
                         aria-hidden
                       />
-                      {s}
+                      {p}
                     </span>
                     <span className="text-muted-foreground mt-0.5 block text-[11px] leading-tight">
                       {meta.blurb}
@@ -232,6 +232,22 @@ export function CreateIncidentDialog({
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="env">ENV</Label>
+              <Input
+                id="env"
+                value={env}
+                onChange={(e) => setEnv(e.target.value)}
+                placeholder="prod-us-east-1"
+                list="env-suggestions"
+              />
+              <datalist id="env-suggestions">
+                {ENV_SUGGESTIONS.map((option) => (
+                  <option key={option} value={option} />
+                ))}
+              </datalist>
+            </div>
+
+            <div className="grid gap-2">
               <Label>Customer impact</Label>
               <Select
                 value={impact}
@@ -244,23 +260,6 @@ export function CreateIncidentDialog({
                   {(Object.keys(IMPACT_META) as Impact[]).map((key) => (
                     <SelectItem key={key} value={key}>
                       {IMPACT_META[key].label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Assignee</Label>
-              <Select value={assigneeId} onValueChange={setAssigneeId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name} · {u.team}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -287,29 +286,68 @@ export function CreateIncidentDialog({
             </div>
           </div>
 
+          <Separator />
+
           <div className="grid gap-2">
-            <Label>Labels</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {LABEL_SUGGESTIONS.map((label) => {
-                const active = labels.includes(label);
-                return (
-                  <motion.button
-                    key={label}
-                    type="button"
-                    whileTap={{ scale: 0.94 }}
-                    onClick={() => toggleLabel(label)}
-                    className={cn(
-                      "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
-                      active
-                        ? "bg-primary text-primary-foreground border-transparent"
-                        : "text-muted-foreground hover:bg-accent"
-                    )}
-                  >
-                    {label}
-                  </motion.button>
-                );
-              })}
+            <Label htmlFor="bot-call-ids">Bot call IDs</Label>
+            <CallIdInput
+              id="bot-call-ids"
+              value={botCallIds}
+              onChange={setBotCallIds}
+              placeholder="Paste one or many — Enter or comma to add"
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="voicestack-call-ids">VoiceStack call IDs</Label>
+            <CallIdInput
+              id="voicestack-call-ids"
+              value={voicestackCallIds}
+              onChange={setVoicestackCallIds}
+              placeholder="Paste one or many — Enter or comma to add"
+            />
+          </div>
+
+          <Separator />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label>Reporter</Label>
+              <Select value={reporterId} onValueChange={setReporterId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} · {u.team}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            <div className="grid gap-2">
+              <Label>Assignee</Label>
+              <Select value={assigneeId} onValueChange={setAssigneeId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} · {u.team}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Screenshots and files</Label>
+            <AttachmentPicker value={attachments} onChange={setAttachments} />
           </div>
 
           <DialogFooter>

@@ -14,7 +14,7 @@ Built with **Next.js 16 (App Router)**, **shadcn/ui**, **Tailwind CSS v4**,
 | `/dashboard` | Open/critical counts, MTTA, MTTR, reported-vs-resolved, priority mix, a target-ranked "needs attention" list, and a live activity feed |
 | `/board` | Drag-and-drop kanban across Triage → Investigating → Mitigating → Monitoring → Resolved, filterable by priority, service and assignee |
 | `/incidents` | Filterable, sortable table of every incident |
-| `/incidents/[id]` | Timeline, comments, priority/status/assignee controls, and the response clock |
+| `/incidents/[id]` | Timeline, comments, evidence (call IDs + attachments), priority/status/assignee controls, and the response clock |
 | `/analytics` | 7/30/90-day windows: trends, per-service reliability and responder load, each chart backed by a table |
 | `/team` | Per-responder queues and per-service health |
 | `/settings` | Theme, account switching, priority targets, demo-data reset |
@@ -39,6 +39,19 @@ and incident page all count down against:
 Both lists live in code, not a database: services in
 [`src/lib/seed.ts`](src/lib/seed.ts) and priorities in
 [`src/lib/types.ts`](src/lib/types.ts).
+
+A report also captures a free-text **ENV**, any number of **bot call IDs** and
+**VoiceStack call IDs**, and **screenshots or files**. Reporter and assignee are
+both pickable — filing on someone else's behalf is recorded in the timeline as
+"reported … (filed by …)".
+
+### Where attachments live
+
+The incident record holds only file metadata. The bytes go to **IndexedDB**
+([`src/lib/attachments.ts`](src/lib/attachments.ts)) because localStorage caps
+out around 5MB and one screenshot can spend most of that. Nothing outside that
+module touches the blobs, so pointing attachments at object storage later is a
+four-function change.
 
 ## Getting started
 

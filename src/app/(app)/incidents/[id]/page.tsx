@@ -18,6 +18,7 @@ import {
 import { PriorityBadge } from "@/components/priority-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
+import { IncidentEvidence } from "@/components/incidents/incident-evidence";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -197,19 +198,15 @@ export default function IncidentDetailPage() {
                 <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">
                   {incident.description || "No description was captured."}
                 </p>
-                {incident.labels.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {incident.labels.map((label) => (
-                      <span
-                        key={label}
-                        className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px]"
-                      >
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </Card>
+            </motion.div>
+
+            <motion.div variants={fadeUp}>
+              <IncidentEvidence
+                botCallIds={incident.botCallIds}
+                voicestackCallIds={incident.voicestackCallIds}
+                attachments={incident.attachments}
+              />
             </motion.div>
 
             <motion.div variants={fadeUp}>
@@ -476,6 +473,12 @@ export default function IncidentDetailPage() {
                 <div className="flex items-center justify-between">
                   <dt className="text-muted-foreground">Service</dt>
                   <dd>{service?.name ?? "—"}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">ENV</dt>
+                  <dd className="truncate font-mono text-[11px]">
+                    {incident.env || "—"}
+                  </dd>
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-muted-foreground">Owner team</dt>

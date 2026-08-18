@@ -20,6 +20,18 @@ export interface User {
   avatarColor: string;
 }
 
+/**
+ * File metadata. The bytes themselves live in IndexedDB (see
+ * src/lib/attachments.ts) because localStorage cannot hold a screenshot.
+ */
+export interface Attachment {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  addedAt: string;
+}
+
 export interface Service {
   id: string;
   name: string;
@@ -54,9 +66,13 @@ export interface Incident {
   status: IncidentStatus;
   impact: Impact;
   serviceId: string;
+  /** Free-form environment the incident was seen in, e.g. "prod-us-east-1". */
+  env: string;
+  botCallIds: string[];
+  voicestackCallIds: string[];
+  attachments: Attachment[];
   reporterId: string;
   assigneeId: string | null;
-  labels: string[];
   createdAt: string;
   updatedAt: string;
   acknowledgedAt: string | null;

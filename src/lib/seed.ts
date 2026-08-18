@@ -85,17 +85,24 @@ const TITLES: Seedling[] = [
   ["Log level left at debug, filling the disk", "Verbose logging from a debugging session was never reverted.", "P4", "none", "config"],
 ];
 
-const LABELS = [
-  "regression",
-  "deploy",
-  "third-party",
-  "capacity",
-  "security",
-  "data",
-  "customer-reported",
-  "monitoring-gap",
-  "rollback",
+const ENVS = [
+  "prod-us-east-1",
+  "prod-us-east-1",
+  "prod-eu-west-1",
+  "prod-apac-1",
+  "staging",
 ];
+
+/** Call ids look like the ones the bot and VoiceStack hand out. */
+function botCallId(rand: () => number) {
+  return `bot_${Math.floor(rand() * 0xffffffff)
+    .toString(16)
+    .padStart(8, "0")}`;
+}
+
+function voicestackCallId(rand: () => number) {
+  return `vs-${10000 + Math.floor(rand() * 89999)}-${1000 + Math.floor(rand() * 8999)}`;
+}
 
 const COMMENTS = [
   "Rolled back the last deploy, watching the error rate now.",
@@ -187,10 +194,10 @@ export function buildSeed(now = Date.now()): SeedResult {
           );
 
     const id = `inc_${i + 1}`;
-    const labelCount = 1 + Math.floor(rand() * 2);
-    const labels = Array.from(
-      new Set(Array.from({ length: labelCount }, () => pick(rand, LABELS)))
-    );
+
+    // Most reports name one call; some arrive as a batch from support.
+    const botCount = rand() < 0.25 ? 0 : rand() < 0.7 ? 1 : 2 + Math.floor(rand() * 3);
+    const voiceCount = rand() < 0.45 ? 0 : rand() < 0.75 ? 1 : 2 + Math.floor(rand() * 2);
 
     const updatedAt =
       resolvedAt ??
@@ -207,9 +214,14 @@ export function buildSeed(now = Date.now()): SeedResult {
       status,
       impact,
       serviceId,
+      env: pick(rand, ENVS),
+      botCallIds: Array.from({ length: botCount }, () => botCallId(rand)),
+      voicestackCallIds: Array.from({ length: voiceCount }, () =>
+        voicestackCallId(rand)
+      ),
+      attachments: [],
       reporterId: reporter.id,
       assigneeId: assignee?.id ?? null,
-      labels,
       createdAt: createdAt.toISOString(),
       updatedAt: updatedAt.toISOString(),
       acknowledgedAt: acknowledgedAt?.toISOString() ?? null,

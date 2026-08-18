@@ -46,7 +46,10 @@ function CommandPalette({
         (i) =>
           i.title.toLowerCase().includes(q) ||
           i.key.toLowerCase().includes(q) ||
-          i.labels.some((l) => l.includes(q))
+          i.env.toLowerCase().includes(q) ||
+          [...i.botCallIds, ...i.voicestackCallIds].some((id) =>
+            id.toLowerCase().includes(q)
+          )
       )
       .slice(0, 8);
   }, [incidents, query]);
@@ -65,7 +68,7 @@ function CommandPalette({
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search incidents by title, key or label…"
+            placeholder="Search incidents by title, key, env or call ID…"
             className="placeholder:text-muted-foreground h-12 w-full bg-transparent text-sm outline-none"
           />
           <kbd className="text-muted-foreground hidden rounded border px-1.5 py-0.5 text-[10px] sm:block">

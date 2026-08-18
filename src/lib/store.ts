@@ -3,7 +3,9 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { buildSeed, SERVICES, USERS } from "./seed";
+import { deleteAttachment } from "./attachments";
 import type {
+  Attachment,
   Incident,
   IncidentStatus,
   Priority,
@@ -18,8 +20,13 @@ export interface NewIncidentInput {
   priority: Priority;
   impact: Incident["impact"];
   serviceId: string;
+  env: string;
+  botCallIds: string[];
+  voicestackCallIds: string[];
+  attachments: Attachment[];
   assigneeId: string | null;
-  labels: string[];
+  /** Defaults to the acting user when the form does not name someone else. */
+  reporterId?: string;
   status?: IncidentStatus;
 }
 
@@ -117,9 +124,12 @@ export const useIncidentStore = create<IncidentState>()(
           status,
           impact: input.impact,
           serviceId: input.serviceId,
-          reporterId: actorId,
+          env: input.env.trim(),
+          botCallIds: input.botCallIds,
+          voicestackCallIds: input.voicestackCallIds,
+          attachments: input.attachments,
+          reporterId: input.reporterId || actorId,
           assigneeId: input.assigneeId,
-          labels: input.labels,
           createdAt: now,
           updatedAt: now,
           acknowledgedAt: input.assigneeId ? now : null,
@@ -138,8 +148,16 @@ export const useIncidentStore = create<IncidentState>()(
                 id: uid(),
                 incidentId: incident.id,
                 kind: "created" as const,
-                message: `reported this incident as ${incident.priority}`,
-                authorId: actorId,
+                // The event belongs to the reporter, who may not be whoever
+                // filled in the form — note the filer so the trail stays honest.
+                message:
+                  incident.reporterId === actorId
+                    ? `reported this incident as ${incident.priority}`
+                    : `reported this incident as ${incident.priority} (filed by ${
+                        state.users.find((u) => u.id === actorId)?.name ??
+                        "someone else"
+                      })`,
+                authorId: incident.reporterId,
                 at: now,
               },
             ],
@@ -279,17 +297,22 @@ export const useIncidentStore = create<IncidentState>()(
         }));
       },
 
-      deleteIncident: (id) =>
+      deleteIncident: (id) => {
+        const incident = get().incidents.find((i) => i.id === id);
+        for (const attachment of incident?.attachments ?? []) {
+          void deleteAttachment(attachment.id);
+        }
         set((state) => ({
           incidents: state.incidents.filter((i) => i.id !== id),
           events: state.events.filter((e) => e.incidentId !== id),
-        })),
+        }));
+      },
     }),
     {
       name: "incident-tracker/data",
-      // v2 renamed `severity` to `priority` and replaced the service list, so
-      // anything older is discarded and reseeded rather than migrated.
-      version: 2,
+      // v3 dropped labels and added env / call ids / attachments. Older
+      // payloads are discarded and reseeded rather than migrated.
+      version: 3,
       migrate: () => ({ incidents: [], events: [], seededAt: null }),
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({

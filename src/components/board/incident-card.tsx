@@ -6,7 +6,13 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion } from "motion/react";
 import { formatDistanceToNow } from "date-fns";
-import { GripVertical, MessageSquare, TriangleAlert } from "lucide-react";
+import {
+  GripVertical,
+  MessageSquare,
+  Paperclip,
+  PhoneCall,
+  TriangleAlert,
+} from "lucide-react";
 import { PriorityBadge } from "@/components/priority-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn } from "@/lib/utils";
@@ -32,6 +38,9 @@ export function IncidentCardBody({
   handleProps?: React.HTMLAttributes<HTMLButtonElement>;
 }) {
   const now = useNow();
+  const callIdCount =
+    incident.botCallIds.length + incident.voicestackCallIds.length;
+  const attachmentCount = incident.attachments.length;
   const breached = isPastTarget(incident, now);
   const burn = Math.min(1, targetBurn(incident, now));
 
@@ -76,16 +85,25 @@ export function IncidentCardBody({
             </p>
           )}
 
-          {incident.labels.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {incident.labels.slice(0, 3).map((label) => (
-                <span
-                  key={label}
-                  className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px]"
-                >
-                  {label}
+          {(incident.env || callIdCount > 0 || attachmentCount > 0) && (
+            <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-1">
+              {incident.env && (
+                <span className="bg-muted rounded px-1.5 py-0.5 font-mono text-[10px]">
+                  {incident.env}
                 </span>
-              ))}
+              )}
+              {callIdCount > 0 && (
+                <span className="inline-flex items-center gap-1 text-[10px]">
+                  <PhoneCall className="size-3" />
+                  {callIdCount}
+                </span>
+              )}
+              {attachmentCount > 0 && (
+                <span className="inline-flex items-center gap-1 text-[10px]">
+                  <Paperclip className="size-3" />
+                  {attachmentCount}
+                </span>
+              )}
             </div>
           )}
 
