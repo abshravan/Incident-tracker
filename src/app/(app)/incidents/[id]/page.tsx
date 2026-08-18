@@ -19,9 +19,11 @@ import { PriorityBadge } from "@/components/priority-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { IncidentEvidence } from "@/components/incidents/incident-evidence";
+import { RichText } from "@/components/rich-text";
+import { RichTextEditor } from "@/components/rich-text-editor";
+import { EtaControl } from "@/components/incidents/eta-control";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -33,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { useIncidentStore } from "@/lib/store";
 import { useNow } from "@/hooks/use-now";
+import { referencedAttachmentIds } from "@/lib/richtext";
 import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/lib/auth";
 import { fadeUp, stagger } from "@/lib/motion";
@@ -42,6 +45,7 @@ import {
   minutesBetween,
   targetBurn,
 } from "@/lib/metrics";
+import type { Attachment } from "@/lib/types";
 import {
   IMPACT_META,
   PRIORITIES,
@@ -58,6 +62,7 @@ const KIND_STYLE: Record<TimelineKind, { dot: string; label: string }> = {
   status: { dot: "bg-sky-500", label: "Status" },
   priority: { dot: "bg-amber-500", label: "Priority" },
   assignment: { dot: "bg-violet-500", label: "Assignment" },
+  eta: { dot: "bg-teal-500", label: "ETA" },
   comment: { dot: "bg-muted-foreground", label: "Comment" },
   action: { dot: "bg-muted-foreground", label: "Action" },
   resolved: { dot: "bg-emerald-500", label: "Resolved" },
@@ -78,9 +83,13 @@ export default function IncidentDetailPage() {
   const services = useIncidentStore((s) => s.services);
   const updateIncident = useIncidentStore((s) => s.updateIncident);
   const addComment = useIncidentStore((s) => s.addComment);
+  const setEta = useIncidentStore((s) => s.setEta);
   const deleteIncident = useIncidentStore((s) => s.deleteIncident);
 
   const [draft, setDraft] = React.useState("");
+  const [draftAttachments, setDraftAttachments] = React.useState<Attachment[]>(
+    []
+  );
 
   const userById = React.useMemo(
     () => new Map(users.map((u) => [u.id, u])),
@@ -111,6 +120,13 @@ export default function IncidentDetailPage() {
     );
   }
 
+  // Anything embedded in the description already renders there, so the gallery
+  // shows only what is not shown inline.
+  const inlineIds = referencedAttachmentIds(incident.description);
+  const galleryAttachments = incident.attachments.filter(
+    (a) => !inlineIds.has(a.id)
+  );
+
   const service = services.find((s) => s.id === incident.serviceId);
   const reporter = userById.get(incident.reporterId);
   const assignee = incident.assigneeId
@@ -120,11 +136,12 @@ export default function IncidentDetailPage() {
   const breached = isPastTarget(incident, now);
   const meta = PRIORITY_META[incident.priority];
 
-  function submitComment(event: React.FormEvent) {
-    event.preventDefault();
+  function submitComment(event?: React.FormEvent) {
+    event?.preventDefault();
     if (!draft.trim() || !user || !incident) return;
-    addComment(incident.id, draft, user.id);
+    addComment(incident.id, draft, user.id, draftAttachments);
     setDraft("");
+    setDraftAttachments([]);
   }
 
   return (
@@ -199,9 +216,11 @@ export default function IncidentDetailPage() {
                 <h2 className="text-xs font-semibold tracking-wide uppercase">
                   Summary
                 </h2>
-                <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">
-                  {incident.description || "No description was captured."}
-                </p>
+                <RichText
+                  className="mt-2"
+                  source={incident.description}
+                  empty="No description was captured."
+                />
               </Card>
             </motion.div>
 
@@ -209,7 +228,7 @@ export default function IncidentDetailPage() {
               <IncidentEvidence
                 botCallIds={incident.botCallIds}
                 voicestackCallIds={incident.voicestackCallIds}
-                attachments={incident.attachments}
+                attachments={galleryAttachments}
               />
             </motion.div>
 
@@ -260,9 +279,9 @@ export default function IncidentDetailPage() {
                               )}
                             </p>
                             {event.kind === "comment" && (
-                              <p className="bg-muted/60 mt-1.5 rounded-lg px-3 py-2 text-sm leading-relaxed">
-                                {event.message}
-                              </p>
+                              <div className="bg-muted/60 mt-1.5 rounded-lg px-3 py-2">
+                                <RichText source={event.message} />
+                              </div>
                             )}
                             <p
                               className="text-muted-foreground mt-1 text-[11px]"
@@ -282,15 +301,15 @@ export default function IncidentDetailPage() {
                 <form onSubmit={submitComment} className="flex gap-3">
                   <UserAvatar user={user} className="mt-1 size-8 shrink-0" />
                   <div className="flex-1">
-                    <Textarea
+                    <RichTextEditor
                       value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
+                      onChange={setDraft}
+                      attachments={draftAttachments}
+                      onAttachmentsChange={setDraftAttachments}
+                      rows={3}
                       placeholder="Post an update — what you tried, what you saw, what is next."
-                      rows={2}
-                      onKeyDown={(e) => {
-                        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                          submitComment(e);
-                        }
+                      onSubmitShortcut={() => {
+                        if (draft.trim()) submitComment();
                       }}
                     />
                     <div className="mt-2 flex items-center justify-between">
@@ -341,6 +360,14 @@ export default function IncidentDetailPage() {
                         : `${Math.round(burn * 100)}% of the window used`}
                   </p>
                 </div>
+
+                <Separator />
+
+                <EtaControl
+                  incident={incident}
+                  now={now}
+                  onChange={(next) => user && setEta(incident.id, next, user.id)}
+                />
 
                 <Separator />
 

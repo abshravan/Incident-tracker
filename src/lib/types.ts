@@ -50,6 +50,7 @@ export type TimelineKind =
   | "status"
   | "priority"
   | "assignment"
+  | "eta"
   | "comment"
   | "action"
   | "resolved";
@@ -58,15 +59,19 @@ export interface TimelineEvent {
   id: string;
   incidentId: string;
   kind: TimelineKind;
+  /** Rich text for comments — see src/lib/richtext.tsx for the subset. */
   message: string;
   authorId: string;
   at: string; // ISO
+  /** Images pasted into a comment, referenced from `message` as att:<id>. */
+  attachments?: Attachment[];
 }
 
 export interface Incident {
   id: string;
   key: string; // INC-104
   title: string;
+  /** Rich text — see src/lib/richtext.tsx for the supported subset. */
   description: string;
   priority: Priority;
   status: IncidentStatus;
@@ -82,6 +87,8 @@ export interface Incident {
   createdAt: string;
   updatedAt: string;
   acknowledgedAt: string | null;
+  /** Assignee's estimate of when this will be done, ISO. */
+  eta: string | null;
   resolvedAt: string | null;
   order: number; // position within its board column
 }

@@ -85,9 +85,21 @@ export function AttachmentPicker({
     [value, onChange]
   );
 
-  // A screenshot is usually on the clipboard, not on disk.
+  // A screenshot is usually on the clipboard, not on disk. This listens at the
+  // window because the drop zone is not focusable — but a paste aimed at a text
+  // field belongs to that field, otherwise an image pasted into the description
+  // gets stored twice: once inline by the editor and once again here.
   React.useEffect(() => {
     function onPaste(event: ClipboardEvent) {
+      const target = (event.target as HTMLElement | null) ?? document.activeElement;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "TEXTAREA" ||
+          target.tagName === "INPUT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
       const files = Array.from(event.clipboardData?.files ?? []);
       if (files.length > 0) {
         event.preventDefault();

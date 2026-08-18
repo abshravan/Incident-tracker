@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -42,6 +42,7 @@ import {
   type Priority,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { referencedAttachmentIds } from "@/lib/richtext";
 
 const ENV_SUGGESTIONS = ["prod-us-east-1", "prod-eu-west-1", "staging", "dev"];
 
@@ -71,6 +72,14 @@ export function CreateIncidentDialog({
   const [attachments, setAttachments] = React.useState<Attachment[]>([]);
   const [reporterId, setReporterId] = React.useState<string>(user?.id ?? "");
   const [assigneeId, setAssigneeId] = React.useState<string>("unassigned");
+
+  // A screenshot embedded in the description already renders there, so the
+  // file list below shows only the attachments that are not inline.
+  const inlineIds = React.useMemo(
+    () => referencedAttachmentIds(description),
+    [description]
+  );
+  const galleryAttachments = attachments.filter((a) => !inlineIds.has(a.id));
 
   function reset() {
     setTitle("");
@@ -161,12 +170,14 @@ export function CreateIncidentDialog({
 
           <div className="grid gap-2">
             <Label htmlFor="description">What is happening?</Label>
-            <Textarea
+            <RichTextEditor
               id="description"
               rows={4}
               placeholder="Symptoms, blast radius, first signal, anything already ruled out."
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
+              attachments={attachments}
+              onAttachmentsChange={setAttachments}
             />
           </div>
 
@@ -347,7 +358,15 @@ export function CreateIncidentDialog({
 
           <div className="grid gap-2">
             <Label>Screenshots and files</Label>
-            <AttachmentPicker value={attachments} onChange={setAttachments} />
+            <AttachmentPicker
+              value={galleryAttachments}
+              onChange={(next) =>
+                setAttachments([
+                  ...attachments.filter((a) => inlineIds.has(a.id)),
+                  ...next,
+                ])
+              }
+            />
           </div>
 
           <DialogFooter>

@@ -14,7 +14,7 @@ Built with **Next.js 16 (App Router)**, **shadcn/ui**, **Tailwind CSS v4**,
 | `/dashboard` | Open/critical counts, MTTA, MTTR, reported-vs-resolved, priority mix, a target-ranked "needs attention" list, and a live activity feed |
 | `/board` | Drag-and-drop kanban across Triage → Investigating → Mitigating → Monitoring → Resolved, filterable by priority, service and assignee |
 | `/incidents` | Filterable, sortable table of every incident |
-| `/incidents/[id]` | Timeline, comments, evidence (call IDs + attachments), priority/status/assignee controls, and the response clock |
+| `/incidents/[id]` | Rich-text timeline and comments, evidence (call IDs + attachments), priority/status/assignee/ETA controls, and the response clock |
 | `/analytics` | **Admin only.** 7/30/90-day windows: trends, per-service reliability and workload per person, each chart backed by a table |
 | `/team` | Per-person queues and per-service health; resolved/MTTR stats are admin only |
 | `/settings` | Theme, account switching, priority targets, demo-data reset |
@@ -68,6 +68,30 @@ control on its own, so gated pages also check the capability themselves via
 
 Ava and Kai are admins in the demo data; the other four are users. Switch
 between them in Settings to see the difference.
+
+### Rich text in descriptions and comments
+
+Descriptions and comments accept a small markdown subset — fenced code blocks,
+inline code, images, links, bold and italic. Paste or drop a screenshot into
+either and it is embedded inline; the toolbar inserts a code fence, and a
+preview toggle shows the rendered result.
+
+The value stored is plain text, so a real backend can take it unchanged.
+[`src/lib/richtext.ts`](src/lib/richtext.ts) parses it to tokens and
+[`src/components/rich-text.tsx`](src/components/rich-text.tsx) renders those as
+React elements — nothing goes through `dangerouslySetInnerHTML`, and link and
+image URLs are restricted to `http(s)`, `mailto:` and the internal `att:`
+scheme, so pasted text cannot inject markup or a `javascript:` href.
+
+Images embedded in a description are not repeated in the Evidence gallery — the
+gallery lists only attachments that are not already rendered inline.
+
+### ETAs
+
+The assignee (or an admin) can put an ETA on an incident from the response
+clock, and clear it again. It shows as a countdown there, as a chip on the
+board card, as a column in the incident list, and every change lands in the
+timeline. Once resolved, the ETA reports whether it was met.
 
 ### Where attachments live
 

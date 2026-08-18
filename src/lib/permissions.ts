@@ -1,4 +1,4 @@
-import type { Role, User } from "./types";
+import type { Incident, Role, User } from "./types";
 
 /**
  * What a role is allowed to do, in one place. Call sites ask for a capability
@@ -38,3 +38,15 @@ export function can(user: User | null | undefined, capability: Capability) {
 }
 
 export const isAdmin = (user: User | null | undefined) => user?.role === "admin";
+
+/**
+ * The ETA is the assignee's commitment, so it is theirs to set. Admins can too,
+ * since they can already change everything else on the record.
+ */
+export function canSetEta(
+  user: User | null | undefined,
+  incident: Pick<Incident, "assigneeId">
+) {
+  if (!user) return false;
+  return isAdmin(user) || incident.assigneeId === user.id;
+}

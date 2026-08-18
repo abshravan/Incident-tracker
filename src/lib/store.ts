@@ -25,6 +25,7 @@ export interface NewIncidentInput {
   voicestackCallIds: string[];
   attachments: Attachment[];
   assigneeId: string | null;
+  eta?: string | null;
   /** Defaults to the acting user when the form does not name someone else. */
   reporterId?: string;
   status?: IncidentStatus;
@@ -54,7 +55,14 @@ interface IncidentState {
     index: number,
     actorId: string
   ) => void;
-  addComment: (incidentId: string, message: string, actorId: string) => void;
+  addComment: (
+    incidentId: string,
+    message: string,
+    actorId: string,
+    attachments?: Attachment[]
+  ) => void;
+  /** Only the assignee (or an admin) sets this — see canSetEta in permissions. */
+  setEta: (incidentId: string, eta: string | null, actorId: string) => void;
   deleteIncident: (id: string) => void;
 }
 
@@ -133,6 +141,7 @@ export const useIncidentStore = create<IncidentState>()(
           createdAt: now,
           updatedAt: now,
           acknowledgedAt: input.assigneeId ? now : null,
+          eta: input.eta ?? null,
           resolvedAt: status === "resolved" ? now : null,
           order: -1, // lands at the top of its column
         };
@@ -277,7 +286,7 @@ export const useIncidentStore = create<IncidentState>()(
         });
       },
 
-      addComment: (incidentId, message, actorId) => {
+      addComment: (incidentId, message, actorId, attachments) => {
         const now = new Date().toISOString();
         set((state) => ({
           events: [
@@ -289,6 +298,7 @@ export const useIncidentStore = create<IncidentState>()(
               message: message.trim(),
               authorId: actorId,
               at: now,
+              attachments: attachments?.length ? attachments : undefined,
             },
           ],
           incidents: state.incidents.map((i) =>
@@ -297,9 +307,46 @@ export const useIncidentStore = create<IncidentState>()(
         }));
       },
 
+      setEta: (incidentId, eta, actorId) => {
+        const now = new Date().toISOString();
+        const before = get().incidents.find((i) => i.id === incidentId);
+        if (!before || before.eta === eta) return;
+
+        const message = eta
+          ? `set the ETA to ${new Date(eta).toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}`
+          : "cleared the ETA";
+
+        set((state) => ({
+          incidents: state.incidents.map((i) =>
+            i.id === incidentId ? { ...i, eta, updatedAt: now } : i
+          ),
+          events: [
+            ...state.events,
+            {
+              id: uid(),
+              incidentId,
+              kind: "eta" as const,
+              message,
+              authorId: actorId,
+              at: now,
+            },
+          ],
+        }));
+      },
+
       deleteIncident: (id) => {
         const incident = get().incidents.find((i) => i.id === id);
-        for (const attachment of incident?.attachments ?? []) {
+        const orphaned = [
+          ...(incident?.attachments ?? []),
+          // Images pasted into comments live on their timeline events.
+          ...get()
+            .events.filter((e) => e.incidentId === id)
+            .flatMap((e) => e.attachments ?? []),
+        ];
+        for (const attachment of orphaned) {
           void deleteAttachment(attachment.id);
         }
         set((state) => ({
@@ -310,9 +357,9 @@ export const useIncidentStore = create<IncidentState>()(
     }),
     {
       name: "incident-tracker/data",
-      // v3 dropped labels and added env / call ids / attachments. Older
+      // v4 added eta and comment attachments on top of v3's reshape. Older
       // payloads are discarded and reseeded rather than migrated.
-      version: 3,
+      version: 4,
       migrate: () => ({ incidents: [], events: [], seededAt: null }),
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({

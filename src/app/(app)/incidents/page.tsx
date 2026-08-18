@@ -28,6 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useIncidentStore } from "@/lib/store";
+import { useNow } from "@/hooks/use-now";
 import { formatDuration, isOpen, minutesBetween } from "@/lib/metrics";
 import {
   PRIORITIES,
@@ -50,6 +51,7 @@ export default function IncidentsPage() {
   const incidents = useIncidentStore((s) => s.incidents);
   const users = useIncidentStore((s) => s.users);
   const services = useIncidentStore((s) => s.services);
+  const now = useNow();
 
   const [query, setQuery] = React.useState("");
   const [priority, setPriority] = React.useState<Priority | "all">("all");
@@ -197,6 +199,7 @@ export default function IncidentsPage() {
               <TableHead className="w-[150px]">Service</TableHead>
               <TableHead className="w-[110px]">Assignee</TableHead>
               <TableHead className="w-[110px]">Age</TableHead>
+              <TableHead className="w-[120px]">ETA</TableHead>
               <TableHead className="w-[110px]">Time to fix</TableHead>
             </TableRow>
           </TableHeader>
@@ -258,6 +261,23 @@ export default function IncidentsPage() {
                       title={format(new Date(incident.createdAt), "PPpp")}
                     >
                       {formatDistanceToNow(new Date(incident.createdAt))}
+                    </TableCell>
+                    <TableCell className="p-3 text-xs">
+                      {incident.eta ? (
+                        <span
+                          className={
+                            !incident.resolvedAt &&
+                            +new Date(incident.eta) < now
+                              ? "text-destructive font-medium"
+                              : "text-muted-foreground"
+                          }
+                          title={format(new Date(incident.eta), "PPpp")}
+                        >
+                          {format(new Date(incident.eta), "MMM d, HH:mm")}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="p-3 text-xs tabular-nums">
                       {incident.resolvedAt

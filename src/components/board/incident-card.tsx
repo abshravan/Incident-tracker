@@ -7,6 +7,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { motion } from "motion/react";
 import { formatDistanceToNow } from "date-fns";
 import {
+  CalendarClock,
   GripVertical,
   MessageSquare,
   Paperclip,
@@ -41,6 +42,8 @@ export function IncidentCardBody({
   const callIdCount =
     incident.botCallIds.length + incident.voicestackCallIds.length;
   const attachmentCount = incident.attachments.length;
+  const etaOverdue =
+    !!incident.eta && !incident.resolvedAt && +new Date(incident.eta) < now;
   const breached = isPastTarget(incident, now);
   const burn = Math.min(1, targetBurn(incident, now));
 
@@ -85,7 +88,7 @@ export function IncidentCardBody({
             </p>
           )}
 
-          {(incident.env || callIdCount > 0 || attachmentCount > 0) && (
+          {(incident.env || callIdCount > 0 || attachmentCount > 0 || incident.eta) && (
             <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-1">
               {incident.env && (
                 <span className="bg-muted rounded px-1.5 py-0.5 font-mono text-[10px]">
@@ -102,6 +105,18 @@ export function IncidentCardBody({
                 <span className="inline-flex items-center gap-1 text-[10px]">
                   <Paperclip className="size-3" />
                   {attachmentCount}
+                </span>
+              )}
+              {incident.eta && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 text-[10px]",
+                    etaOverdue && "text-destructive font-medium"
+                  )}
+                  title={`ETA ${new Date(incident.eta).toLocaleString()}`}
+                >
+                  <CalendarClock className="size-3" />
+                  {etaOverdue ? "ETA passed" : `ETA ${formatDistanceToNow(new Date(incident.eta))}`}
                 </span>
               )}
             </div>

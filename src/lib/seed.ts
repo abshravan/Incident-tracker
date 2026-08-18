@@ -123,6 +123,14 @@ const STATUS_FLOW: IncidentStatus[] = [
   "resolved",
 ];
 
+/** Mirrors PRIORITY_META targets, in hours, for shaping demo ETAs. */
+const PRIORITY_TARGET_HOURS: Record<Priority, number> = {
+  P1: 1,
+  P2: 4,
+  P3: 24,
+  P4: 72,
+};
+
 function pick<T>(rand: () => number, arr: T[]): T {
   return arr[Math.floor(rand() * arr.length)];
 }
@@ -196,6 +204,18 @@ export function buildSeed(now = Date.now()): SeedResult {
     const botCount = rand() < 0.25 ? 0 : rand() < 0.7 ? 1 : 2 + Math.floor(rand() * 3);
     const voiceCount = rand() < 0.45 ? 0 : rand() < 0.75 ? 1 : 2 + Math.floor(rand() * 2);
 
+    // Assignees commit to an ETA on most open work; some of those slip.
+    const eta =
+      status === "resolved" || !assignee || rand() < 0.3
+        ? null
+        : new Date(
+            now +
+              (rand() < 0.25 ? -1 : 1) *
+                (0.5 + rand() * 2) *
+                PRIORITY_TARGET_HOURS[priority] *
+                HOUR
+          ).toISOString();
+
     const updatedAt =
       resolvedAt ??
       new Date(
@@ -222,6 +242,7 @@ export function buildSeed(now = Date.now()): SeedResult {
       createdAt: createdAt.toISOString(),
       updatedAt: updatedAt.toISOString(),
       acknowledgedAt: acknowledgedAt?.toISOString() ?? null,
+      eta,
       resolvedAt: resolvedAt?.toISOString() ?? null,
       order: i,
     });
